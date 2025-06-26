@@ -19,8 +19,6 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
     logging:
       driver: "json-file"
       options:
