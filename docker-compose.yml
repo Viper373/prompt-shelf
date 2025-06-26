@@ -12,12 +12,12 @@ services:
     volumes:
       - ./log/backend:/logs
       - /etc/localtime:/etc/localtime:ro
-      - ./data/aigame:/data
+      - ./data/promptshelf:/data
     ports:
       - "8080:8080"
     restart: always
     depends_on:
-      aigame-mysql:
+      mysql:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
