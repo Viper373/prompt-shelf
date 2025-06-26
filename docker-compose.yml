@@ -1,0 +1,72 @@
+
+services:
+  prompt-shelf:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment: 
+      API_LOG: "info"
+      RUST_BACKTRACE: 1
+      MYSQL_URI: mysql://shelf:shelf-25@mysql:3306/promptshelf
+      REDIS_URI: redis://:promptshelf-25@dragonfly:6379
+    volumes:
+      - ./log/backend:/logs
+      - /etc/localtime:/etc/localtime:ro
+      - ./data/aigame:/data
+    ports:
+      - "8080:8080"
+    restart: always
+    depends_on:
+      aigame-mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  mysql:
+    image: mysql:8.0
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./data/mysql:/var/lib/mysql
+      - ./conf/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+    ports:
+      - "6306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: promptshelf-25 
+      MYSQL_DATABASE: promptshelf 
+      MYSQL_USER: shelf
+      MYSQL_PASSWORD: shelf-25
+      LANG: C.UTF-8
+    healthcheck:
+      test: ["CMD", "mysqladmin", "-uroot", "-prootpass", "ping", "-h", "localhost"]
+      interval: 10s  
+      timeout: 5s     
+      retries: 3      
+      start_period: 10s  
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  dragonfly:
+    image: 'docker.dragonflydb.io/dragonflydb/dragonfly'
+    ulimits:
+      memlock: -1
+    environment:
+      DFLY_requirepass: 'promptshelf-25'
+      DFLY_cache_mode: 'true'
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/dragonfly:/data
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
