@@ -1,3 +1,9 @@
+-- Create database (if not exists)
+CREATE DATABASE IF NOT EXISTS prompt_shelf DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Select the database
+USE prompt_shelf;
+
 CREATE TABLE prompts (
     id             SERIAL PRIMARY KEY,         -- 自增主键
     latest_version VARCHAR(32) NOT NULL DEFAULT '0.0.1',
