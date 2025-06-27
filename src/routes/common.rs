@@ -13,11 +13,12 @@
 use std::{path::Path, sync::OnceLock, time::SystemTime};
 
 use anyhow::{Context, Ok, Result, anyhow};
-use axum::{http::StatusCode, response::IntoResponse};
+use axum::{Json, http::StatusCode, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use deadpool_redis::Pool;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use tokio::fs;
 use uuid::Uuid;
 
@@ -30,25 +31,66 @@ pub struct AppState {
     pub redis_pool: Pool,
 }
 
-#[derive(Debug)]
-pub struct AppError {
-    code: StatusCode,
+#[derive(Debug, Serialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum AppCode {
+    Success = 200,
+    BadRequest = 400,
+    Unauthorized = 401,
+    Forbidden = 403,
+    NotFound = 404,
+    InternalError = 500,
+}
+
+impl AppCode {
+    pub fn http_status(self) -> StatusCode {
+        match self {
+            AppCode::Success => StatusCode::OK,
+            AppCode::BadRequest => StatusCode::BAD_REQUEST,
+            AppCode::Unauthorized => StatusCode::UNAUTHORIZED,
+            AppCode::Forbidden => StatusCode::FORBIDDEN,
+            AppCode::NotFound => StatusCode::NOT_FOUND,
+            AppCode::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct AppResponse<T: Serialize> {
+    code: AppCode,
     msg: String,
+    result: Option<T>,
 }
-impl IntoResponse for AppError {
+impl<T: Serialize> IntoResponse for AppResponse<T> {
     fn into_response(self) -> axum::response::Response {
-        (self.code, self.msg).into_response()
+        let res = Json(json!({"code":self.code, "msg":self.msg, "result":self.result}));
+        (self.code.http_status(), res).into_response()
     }
 }
-impl AppError {
-    pub fn new(code: StatusCode, msg: String) -> Self {
-        Self { code, msg }
+impl<T: Serialize> AppResponse<T> {
+    pub fn new(code: AppCode, msg: String, result: Option<T>) -> Self {
+        Self { code, msg, result }
     }
-    pub fn bad_response(msg: impl Into<String>) -> Self {
-        Self::new(StatusCode::BAD_REQUEST, msg.into())
+    pub fn ok(msg: String, result: Option<T>) -> Self {
+        Self {
+            code: AppCode::Success,
+            msg,
+            result,
+        }
     }
-    pub fn internal(msg: impl Into<String>) -> Self {
-        Self::new(StatusCode::INTERNAL_SERVER_ERROR, msg.into())
+    pub fn bad_request(msg: impl Into<String>) -> Self {
+        Self {
+            code: AppCode::BadRequest,
+            msg: msg.into(),
+            result: None,
+        }
+    }
+    pub fn internal_err(msg: impl Into<String>) -> Self {
+        Self {
+            code: AppCode::InternalError,
+            msg: msg.into(),
+            result: None,
+        }
     }
 }
 
@@ -97,7 +139,7 @@ impl Prompts {
         Ok(())
     }
     pub async fn commit(&mut self, version: &str, com: PromptCommit, content: &str) -> Result<()> {
-        let save_path = find_prompt(&self.id, &version, &com.commit_id)?;
+        let save_path = find_prompt(&self.id, version, &com.commit_id)?;
         fs::write(save_path, content).await?;
         let node = self
             .nodes
@@ -109,7 +151,7 @@ impl Prompts {
         Ok(())
     }
     pub async fn get_content(&self, version: &str, commit_id: &str) -> Result<String> {
-        let save_path = find_prompt(&self.id, &version, &commit_id)?;
+        let save_path = find_prompt(&self.id, version, commit_id)?;
         let content = fs::read_to_string(save_path).await?;
         Ok(content)
     }

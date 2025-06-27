@@ -9,7 +9,9 @@ use crate::init::{init_db, redis_pool};
 pub mod common;
 pub mod config;
 pub mod finder;
+pub mod middleware;
 pub mod status;
+pub mod user;
 
 pub async fn routes() -> Router {
     let sql_uri =
@@ -24,5 +26,7 @@ pub async fn routes() -> Router {
         config,
         redis_pool,
     });
-    Router::new().nest("/status", status::routes())
+    Router::new()
+        .nest("/status", status::routes())
+        .nest("user", user::routes(app_state.clone()))
 }

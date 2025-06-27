@@ -1,6 +1,10 @@
+mod db;
 mod init;
 mod logger;
 mod routes;
+
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 use std::time::{Duration, SystemTime};
 
@@ -23,7 +27,7 @@ async fn main() {
     let start_time = START_TIME.get_or_init(SystemTime::now);
     info!("server start at {:?}", start_time);
     let port = std::env::var("PORT").unwrap_or("8000".to_string());
-    let listener = net::TcpListener::bind(format!("0.0.0.0:{}", port))
+    let listener = net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
         .unwrap();
     let trace_layer = TraceLayer::new_for_http()

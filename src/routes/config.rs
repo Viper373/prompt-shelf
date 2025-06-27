@@ -12,14 +12,26 @@
 
 use std::env;
 
+use super::middleware::JwtConf;
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub data_dir: String,
+    pub jwt_conf: JwtConf,
 }
 
 impl Config {
     pub fn from_env() -> Self {
         let data_dir = env::var("DATA_DIR").unwrap_or("/data".to_string());
-        Config { data_dir }
+        let secret = env::var("JWT_SECRET").unwrap_or("promptshelf".to_string());
+        let expire = env::var("JWT_EXPIRE")
+            .unwrap_or("168".to_string())
+            .parse::<i64>()
+            .unwrap();
+
+        Config {
+            data_dir,
+            jwt_conf: JwtConf { secret, expire },
+        }
     }
 }
