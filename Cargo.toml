@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.98"
 argon2 = { version = "0.5.3", features = ["rand", "std"] }
-axum = "0.8.4"
+axum = { version = "0.8.4", features = ["macros"] }
 chrono = "0.4.41"
 deadpool-redis = "0.21.1"
 jsonwebtoken = "9.3.1"

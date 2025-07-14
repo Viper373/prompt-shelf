@@ -30,4 +30,5 @@ pub async fn routes() -> Router {
     Router::new()
         .nest("/status", status::routes())
         .nest("/user", user::routes(app_state.clone()))
+        .nest("/prompt", prompt::routes(app_state.clone()))
 }

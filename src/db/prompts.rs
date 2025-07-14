@@ -7,11 +7,12 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key, unique)]
     pub id: u64,
-    pub latest_version: String,
-    pub latest_commit: String,
+    pub latest_version: Option<String>,
+    pub latest_commit: Option<String>,
     pub created_at: DateTimeUtc,
     pub updated_at: Option<DateTimeUtc>,
     pub user_id: Option<i64>,
+    pub file_key: String,
     pub org_id: Option<i64>,
 }
 
