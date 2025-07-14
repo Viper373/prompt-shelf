@@ -28,5 +28,5 @@ pub async fn routes() -> Router {
     });
     Router::new()
         .nest("/status", status::routes())
-        .nest("user", user::routes(app_state.clone()))
+        .nest("/user", user::routes(app_state.clone()))
 }
