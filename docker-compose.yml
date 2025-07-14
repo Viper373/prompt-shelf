@@ -58,7 +58,7 @@ services:
       DFLY_requirepass: 'promptshelf-25'
       DFLY_cache_mode: 'true'
     ports:
-      - "6379:6379"
+      - "3379:6379"
     volumes:
       - ./data/dragonfly:/data
       - /etc/localtime:/etc/localtime:ro
