@@ -14,7 +14,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ./data/promptshelf:/data
     ports:
-      - "8080:8080"
+      - "8000:8000"
     restart: always
     depends_on:
       mysql:
