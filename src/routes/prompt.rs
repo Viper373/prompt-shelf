@@ -5,6 +5,7 @@ use axum::{Extension, Json, Router, extract::State, routing::post};
 use sea_orm::{ActiveValue::Set, EntityTrait};
 use serde::{Deserialize, Serialize};
 use tower_http::validate_request::ValidateRequestHeaderLayer;
+use tracing::{error, info};
 
 use super::{
     common::{AppResponse, AppState, Prompts},
@@ -28,6 +29,16 @@ pub async fn create_prompt(
     Json(payload): Json<PromptInfo>,
 ) -> AppResponse<CreateResponse> {
     let prompt = Prompts::new(payload.name);
+    match prompt.save().await {
+        Ok(()) => info!("Prompt {} saved.", prompt.id()),
+        Err(e) => {
+            return AppResponse::internal_err(format!(
+                "Failed to save Prompt {}, {}",
+                prompt.id(),
+                e
+            ));
+        }
+    };
     let prompt_model = prompts::ActiveModel {
         file_key: Set(prompt.id()),
         user_id: Set(Some(claims.id)),

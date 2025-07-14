@@ -22,7 +22,10 @@ use serde_json::{Value, json};
 use tokio::fs;
 use uuid::Uuid;
 
-use super::{config::Config, finder::find_commit};
+use super::{
+    config::Config,
+    finder::{find_commit, find_config},
+};
 
 pub static START_TIME: OnceLock<SystemTime> = OnceLock::new();
 pub struct AppState {
@@ -157,7 +160,8 @@ impl Prompts {
         let data: Self = serde_json::from_str(&content)?;
         Ok(data)
     }
-    pub async fn save<P: AsRef<Path>>(self, path: P) -> Result<()> {
+    pub async fn save(&self) -> Result<()> {
+        let path = find_config(&self.id)?;
         let content = serde_json::to_string_pretty(&self)?;
         fs::write(path, &content).await?;
         Ok(())
