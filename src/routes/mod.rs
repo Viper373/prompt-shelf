@@ -14,8 +14,8 @@ pub mod status;
 pub mod user;
 
 pub async fn routes() -> Router {
-    let sql_uri =
-        env::var("SQL_URI").unwrap_or("mysql://admin:prompt-shelf@mysql:3306/aigame".to_string());
+    let sql_uri = env::var("SQL_URI")
+        .unwrap_or("mysql://admin:prompt-shelf@mysql:3306/promptshelf".to_string());
     let sql_conn = init_db(&sql_uri).await.unwrap();
     let redis_uri =
         env::var("SQL_URI").unwrap_or("redis://:promptshelf-25@dragonfly:6379".to_string());
