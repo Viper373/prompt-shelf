@@ -12,7 +12,7 @@
 
 use std::{path::Path, sync::OnceLock, time::SystemTime};
 
-use anyhow::{Context, Ok, Result, anyhow};
+use anyhow::{Result, anyhow};
 use axum::{Json, http::StatusCode, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use deadpool_redis::Pool;
@@ -22,7 +22,7 @@ use serde_json::{Value, json};
 use tokio::fs;
 use uuid::Uuid;
 
-use super::{config::Config, finder::find_prompt};
+use super::{config::Config, finder::find_commit};
 
 pub static START_TIME: OnceLock<SystemTime> = OnceLock::new();
 pub struct AppState {
@@ -102,20 +102,6 @@ pub struct PromptCommit {
     pub desp: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PromptNode {
-    pub version: String,
-    pub commits: Vec<PromptCommit>,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Prompts {
-    pub name: String,
-    pub id: String,
-    pub nodes: Vec<PromptNode>,
-}
-
 impl PromptCommit {
     pub fn new(author: String, desp: String) -> Self {
         Self {
@@ -127,7 +113,45 @@ impl PromptCommit {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromptNode {
+    pub version: String,
+    pub commits: Vec<PromptCommit>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl PromptNode {
+    pub fn new(version: String) -> Self {
+        Self {
+            version,
+            commits: Vec::new(),
+            updated_at: Utc::now(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Prompts {
+    name: String,
+    id: String,
+    nodes: Vec<PromptNode>,
+}
+
 impl Prompts {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            id: Uuid::new_v4().to_string(),
+            nodes: Vec::new(),
+        }
+    }
+    pub fn id(&self) -> String {
+        self.id.clone()
+    }
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+
     pub async fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = fs::read_to_string(&path).await?;
         let data: Self = serde_json::from_str(&content)?;
@@ -138,8 +162,17 @@ impl Prompts {
         fs::write(path, &content).await?;
         Ok(())
     }
+
+    pub async fn create_version(&mut self, version: &str) -> Result<()> {
+        if self.nodes.iter().any(|n| n.version == version) {
+            return Err(anyhow!("Version {} already exists!", version));
+        }
+        let node = PromptNode::new(version.to_string());
+        self.nodes.push(node);
+        Ok(())
+    }
     pub async fn commit(&mut self, version: &str, com: PromptCommit, content: &str) -> Result<()> {
-        let save_path = find_prompt(&self.id, version, &com.commit_id)?;
+        let save_path = find_commit(&self.id, version, &com.commit_id)?;
         fs::write(save_path, content).await?;
         let node = self
             .nodes
@@ -151,7 +184,7 @@ impl Prompts {
         Ok(())
     }
     pub async fn get_content(&self, version: &str, commit_id: &str) -> Result<String> {
-        let save_path = find_prompt(&self.id, version, commit_id)?;
+        let save_path = find_commit(&self.id, version, commit_id)?;
         let content = fs::read_to_string(save_path).await?;
         Ok(content)
     }

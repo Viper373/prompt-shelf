@@ -6,11 +6,12 @@ USE promptshelf;
 
 CREATE TABLE prompts (
     id             SERIAL PRIMARY KEY,         -- 自增主键
-    latest_version VARCHAR(32) NOT NULL DEFAULT '0.0.1',
-    latest_commit  VARCHAR(64) NOT NULL,       -- 最近一次提交的版本标识（可用 UUID 或 git hash）
+    latest_version VARCHAR(32),
+    latest_commit  VARCHAR(64),       -- 最近一次提交的版本标识（可用 UUID 或 git hash）
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     user_id        BIGINT,
+    file_key       VARCHAR(100) NOT NULL,
     org_id         BIGINT
 );
 

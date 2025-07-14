@@ -10,6 +10,7 @@ pub mod common;
 pub mod config;
 pub mod finder;
 pub mod middleware;
+pub mod prompt;
 pub mod status;
 pub mod user;
 
