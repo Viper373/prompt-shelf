@@ -1,0 +1,10 @@
+FROM ubuntu:22.04
+RUN apt-get update -y && \
+    apt-get install -y libssl-dev  ca-certificates && \ 
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY target/fast/prompt-shelf /app
+RUN chmod +x /app
+
+ENTRYPOINT ["/app"]
