@@ -1,7 +1,11 @@
 use crate::db::users::Entity as Users;
 use std::sync::Arc;
 
-use axum::{Extension, Json, Router, extract::State, routing::post};
+use axum::{
+    Extension, Json, Router,
+    extract::State,
+    routing::{get, post},
+};
 use chrono::{DateTime, Utc};
 use sea_orm::{DatabaseConnection, EntityTrait};
 use serde::{Deserialize, Serialize};
@@ -90,6 +94,7 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
     };
     Router::new()
         .route("/register", post(allow_register))
+        .route("/list/user", get(all_user))
         .layer(ValidateRequestHeaderLayer::custom(jwt_auth))
         .with_state(app_state)
 }
