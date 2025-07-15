@@ -145,6 +145,7 @@ pub async fn create_node(
         return AppResponse::internal_err(format!("Failed to save prompt config: {e}"));
     }
     if let Err(e) = PromptData::update(prompts::ActiveModel {
+        id: Set(payload.prompt_id),
         latest_version: Set(Some(payload.version.clone())),
         ..Default::default()
     })
@@ -193,6 +194,7 @@ pub async fn create_commit(
         return AppResponse::internal_err(format!("Failed to commit prompt: {e}"));
     }
     if let Err(e) = PromptData::update(prompts::ActiveModel {
+        id: Set(payload.prompt_id),
         latest_commit: Set(Some(commit.commit_id.clone())),
         ..Default::default()
     })
