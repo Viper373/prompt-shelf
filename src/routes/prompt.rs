@@ -309,6 +309,32 @@ pub async fn latest(
     }
 }
 
+#[derive(Deserialize)]
+pub struct ContentQueryParams {
+    prompt_id: u64,
+    version: String,
+    commit_id: String,
+}
+
+pub async fn query_content(
+    State(data): State<Arc<AppState>>,
+    Extension(claims): Extension<TokenClaims>,
+    Query(params): Query<ContentQueryParams>,
+) -> AppResponse<String> {
+    let prompt_config = match query_prompt(&data.sql_conn, claims.id, params.prompt_id).await {
+        Ok(p) => p,
+        Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
+    };
+    let content =
+        match Prompts::get_content(&prompt_config.id(), &params.version, &params.commit_id).await {
+            Ok(c) => c,
+            Err(e) => {
+                return AppResponse::internal_err(format!("Failed to get prompt content: {e}"));
+            }
+        };
+    AppResponse::ok("Query content finished".to_string(), Some(content))
+}
+
 pub async fn del(
     State(data): State<Arc<AppState>>,
     Extension(claims): Extension<TokenClaims>,
@@ -337,6 +363,7 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
         .route("/create_commit", post(create_commit))
         .route("/query", get(query))
         .route("/latest", get(latest))
+        .route("/content", get(query_content))
         .route("/", delete(del))
         .layer(ValidateRequestHeaderLayer::custom(jwt_auth))
         .with_state(app_state)
