@@ -12,7 +12,7 @@
 
 use std::{path::Path, sync::OnceLock, time::SystemTime};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Ok, Result, anyhow};
 use axum::{Json, http::StatusCode, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use deadpool_redis::Pool;
@@ -24,7 +24,7 @@ use uuid::Uuid;
 
 use super::{
     config::Config,
-    finder::{find_commit, find_config},
+    finder::{find_commit, find_config, find_prompt},
 };
 
 pub const MAX_CONCURRENT_TASKS: usize = 8;
@@ -165,6 +165,11 @@ impl Prompts {
         let path = find_config(&self.id)?;
         let content = serde_json::to_string_pretty(&self)?;
         fs::write(path, &content).await?;
+        Ok(())
+    }
+    pub async fn delete(file_key: &str) -> Result<()> {
+        let path = find_prompt(file_key)?;
+        fs::remove_dir_all(path).await?;
         Ok(())
     }
 
