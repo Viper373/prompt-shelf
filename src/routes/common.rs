@@ -97,7 +97,7 @@ impl<T: Serialize> AppResponse<T> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PromptCommit {
     pub author: String,
     pub commit_id: String,
