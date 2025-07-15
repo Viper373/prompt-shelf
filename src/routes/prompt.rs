@@ -96,6 +96,15 @@ pub async fn create_node(
     if let Err(e) = prompt_config.save().await {
         return AppResponse::internal_err(format!("Failed to save prompt config: {}", e));
     }
+    if let Err(e) = PromptData::update(prompts::ActiveModel {
+        latest_version: Set(Some(payload.version.clone())),
+        ..Default::default()
+    })
+    .exec(&data.sql_conn)
+    .await
+    {
+        return AppResponse::internal_err(format!("Failed to update prompt version: {}", e));
+    }
 
     AppResponse::ok(
         format!("Create node version {} finished", payload.version),
@@ -133,6 +142,15 @@ pub async fn create_commit(
         .await
     {
         return AppResponse::internal_err(format!("Failed to commit prompt: {}", e));
+    }
+    if let Err(e) = PromptData::update(prompts::ActiveModel {
+        latest_commit: Set(Some(commit.commit_id.clone())),
+        ..Default::default()
+    })
+    .exec(&data.sql_conn)
+    .await
+    {
+        return AppResponse::internal_err(format!("Failed to update prompt version: {}", e));
     }
 
     AppResponse::ok(
