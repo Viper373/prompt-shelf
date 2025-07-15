@@ -70,7 +70,8 @@ pub async fn query_prompt(
     user_id: i64,
     prompt_id: u64,
 ) -> Result<Prompts> {
-    let prompt = match PromptData::find_by_id(prompt_id)
+    let prompt = match PromptData::find()
+        .filter(prompts::Column::Id.eq(prompt_id))
         .filter(prompts::Column::UserId.eq(Some(user_id)))
         .one(conn)
         .await
@@ -88,7 +89,9 @@ pub async fn query_latest_prompt(
     user_id: i64,
     prompt_id: u64,
 ) -> Result<PromptCommit> {
-    let prompt = match PromptData::find_by_id(prompt_id)
+    info!("Querying latest prompt: {prompt_id}");
+    let prompt = match PromptData::find()
+        .filter(prompts::Column::Id.eq(prompt_id))
         .filter(prompts::Column::UserId.eq(Some(user_id)))
         .one(conn)
         .await
