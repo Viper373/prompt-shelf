@@ -1,18 +1,24 @@
+use futures::{StreamExt, stream};
 use std::sync::Arc;
 
 use crate::db::prompts::{self, Entity as PromptData};
 use anyhow::{Result, anyhow};
-use axum::{Extension, Json, Router, extract::State, routing::post};
-use sea_orm::{ActiveValue::Set, EntityTrait};
-use sea_orm::{ColumnTrait, DatabaseConnection, QueryFilter};
+use axum::{
+    Extension, Json, Router,
+    extract::{Query, State},
+    routing::{get, post},
+};
+use chrono::{DateTime, Utc};
+use sea_orm::{
+    ActiveValue::Set, ColumnTrait, Condition, DatabaseConnection, EntityTrait, QueryFilter,
+};
 use serde::{Deserialize, Serialize};
 use tower_http::validate_request::ValidateRequestHeaderLayer;
-use tracing::info;
+use tracing::{error, info};
 
-use super::common::PromptCommit;
-use super::finder::find_config;
 use super::{
-    common::{AppResponse, AppState, Prompts},
+    common::{AppResponse, AppState, MAX_CONCURRENT_TASKS, PromptCommit, Prompts},
+    finder::find_config,
     middleware::{JwtAuth, TokenClaims},
 };
 
@@ -124,6 +130,7 @@ pub struct CommitInfo {
 pub struct CommitResponse {
     commit_id: String,
 }
+
 pub async fn create_commit(
     State(data): State<Arc<AppState>>,
     Extension(claims): Extension<TokenClaims>,
@@ -160,6 +167,78 @@ pub async fn create_commit(
         }),
     )
 }
+
+#[derive(Debug, Deserialize)]
+pub struct QueryParams {
+    id: Option<u64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PromptResponse {
+    id: u64,
+    latest_version: Option<String>,
+    latest_commit: Option<String>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    user_id: Option<i64>,
+    org_id: Option<i64>,
+    prompt: Prompts,
+}
+
+pub async fn query(
+    State(data): State<Arc<AppState>>,
+    Extension(claims): Extension<TokenClaims>,
+    Query(params): Query<QueryParams>,
+) -> AppResponse<Vec<PromptResponse>> {
+    let mut filter_condition = Condition::all();
+    if let Some(prompt_id) = params.id {
+        filter_condition = filter_condition.add(prompts::Column::Id.eq(prompt_id));
+    }
+    let prompt_list = match PromptData::find()
+        .filter(filter_condition)
+        .filter(prompts::Column::UserId.eq(claims.id))
+        .all(&data.sql_conn)
+        .await
+    {
+        Ok(p) => p,
+        Err(e) => return AppResponse::internal_err(format!("Failed to query db: {}", e)),
+    };
+
+    let res: Vec<PromptResponse> = stream::iter(prompt_list)
+        .map(|p| async move {
+            let prompt_config_path = match find_config(&p.file_key) {
+                Ok(p) => p,
+                Err(e) => {
+                    error!("Failed to find prompt: {}", e);
+                    return None;
+                }
+            };
+            let prompt = match Prompts::load(prompt_config_path).await {
+                Ok(p) => p,
+                Err(e) => {
+                    error!("Failed to load prompt: {}", e);
+                    return None;
+                }
+            };
+            Some(PromptResponse {
+                id: p.id,
+                latest_version: p.latest_version.clone(),
+                latest_commit: p.latest_commit.clone(),
+                created_at: p.created_at,
+                updated_at: p.updated_at,
+                user_id: p.user_id,
+                org_id: p.org_id,
+                prompt,
+            })
+        })
+        .buffer_unordered(MAX_CONCURRENT_TASKS)
+        .filter_map(|p| async move { p })
+        .collect()
+        .await;
+
+    AppResponse::ok("Query prompt finished".to_string(), Some(res))
+}
+
 pub fn routes(app_state: Arc<AppState>) -> Router {
     let jwt_auth = JwtAuth {
         conf: Arc::new(app_state.config.jwt_conf.clone()),
@@ -168,6 +247,7 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
         .route("/create_prompt", post(create_prompt))
         .route("/create_node", post(create_node))
         .route("/create_commit", post(create_commit))
+        .route("/query", get(query))
         .layer(ValidateRequestHeaderLayer::custom(jwt_auth))
         .with_state(app_state)
 }

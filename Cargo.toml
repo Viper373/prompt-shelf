@@ -9,6 +9,7 @@ argon2 = { version = "0.5.3", features = ["rand", "std"] }
 axum = { version = "0.8.4", features = ["macros"] }
 chrono = "0.4.41"
 deadpool-redis = "0.21.1"
+futures = "0.3.31"
 jsonwebtoken = "9.3.1"
 mimalloc = "0.1.47"
 rand = "0.9.1"

@@ -10,7 +10,7 @@ pub struct Model {
     pub latest_version: Option<String>,
     pub latest_commit: Option<String>,
     pub created_at: DateTimeUtc,
-    pub updated_at: Option<DateTimeUtc>,
+    pub updated_at: DateTimeUtc,
     pub user_id: Option<i64>,
     pub file_key: String,
     pub org_id: Option<i64>,

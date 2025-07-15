@@ -27,6 +27,7 @@ use super::{
     finder::{find_commit, find_config},
 };
 
+pub const MAX_CONCURRENT_TASKS: usize = 8;
 pub static START_TIME: OnceLock<SystemTime> = OnceLock::new();
 pub struct AppState {
     pub sql_conn: DatabaseConnection,
