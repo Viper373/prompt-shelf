@@ -284,7 +284,7 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
         .route("/create_node", post(create_node))
         .route("/create_commit", post(create_commit))
         .route("/query", get(query))
-        .route("/delete", delete(del))
+        .route("/", delete(del))
         .layer(ValidateRequestHeaderLayer::custom(jwt_auth))
         .with_state(app_state)
 }
