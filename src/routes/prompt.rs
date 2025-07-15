@@ -88,7 +88,7 @@ pub async fn query_latest_prompt(
     conn: &DatabaseConnection,
     user_id: i64,
     prompt_id: u64,
-) -> Result<PromptCommit> {
+) -> Result<PromptCommitResponse> {
     info!("Querying latest prompt: {prompt_id}");
     let prompt = match PromptData::find()
         .filter(prompts::Column::Id.eq(prompt_id))
@@ -107,14 +107,18 @@ pub async fn query_latest_prompt(
     if prompt.latest_version.is_none() || prompt.latest_commit.is_none() {
         return Err(anyhow!("Invalid prompt commit/version "));
     }
-    let prompt_config_path = find_config(&prompt.file_key)?;
+    let (file_key, latest_version, latest_commit) = (
+        &prompt.file_key,
+        &prompt.latest_version.unwrap(),
+        &prompt.latest_commit.unwrap(),
+    );
+    let prompt_config_path = find_config(file_key)?;
     let prompt_config = Prompts::load(prompt_config_path).await?;
-    prompt_config
-        .get_commit(
-            &prompt.latest_version.unwrap(),
-            &prompt.latest_commit.unwrap(),
-        )
-        .await
+    let commit = prompt_config
+        .get_commit(latest_version, latest_commit)
+        .await?;
+    let content = Prompts::get_content(file_key, latest_version, latest_commit).await?;
+    Ok(PromptCommitResponse { commit, content })
 }
 
 pub async fn delete_prompt(conn: &DatabaseConnection, user_id: i64, prompt_id: u64) -> Result<()> {
@@ -288,11 +292,17 @@ pub async fn query(
     AppResponse::ok("Query prompt finished".to_string(), Some(res))
 }
 
+#[derive(Serialize)]
+pub struct PromptCommitResponse {
+    commit: PromptCommit,
+    content: String,
+}
+
 pub async fn latest(
     State(data): State<Arc<AppState>>,
     Extension(claims): Extension<TokenClaims>,
     Query(params): Query<CreateResponse>,
-) -> AppResponse<PromptCommit> {
+) -> AppResponse<PromptCommitResponse> {
     match query_latest_prompt(&data.sql_conn, claims.id, params.id).await {
         Ok(c) => AppResponse::ok("Query successfully".to_string(), Some(c)),
         Err(e) => AppResponse::internal_err(format!("Query failed: {e}")),
