@@ -93,6 +93,10 @@ pub async fn query_latest_prompt(conn: &DatabaseConnection, user_id: i64) -> Res
         Ok(None) => return Err(anyhow!("Prompt id not exist!")),
         Err(e) => return Err(anyhow!("Failed to query db: {e}")),
     };
+    info!(
+        "latest version: {:?}, latest commit: {:?}",
+        prompt.latest_version, prompt.latest_commit
+    );
     if prompt.latest_version.is_none() || prompt.latest_commit.is_none() {
         return Err(anyhow!("Invalid prompt commit/version "));
     }
@@ -144,16 +148,6 @@ pub async fn create_node(
     if let Err(e) = prompt_config.save().await {
         return AppResponse::internal_err(format!("Failed to save prompt config: {e}"));
     }
-    if let Err(e) = PromptData::update(prompts::ActiveModel {
-        id: Set(payload.prompt_id),
-        latest_version: Set(Some(payload.version.clone())),
-        ..Default::default()
-    })
-    .exec(&data.sql_conn)
-    .await
-    {
-        return AppResponse::internal_err(format!("Failed to update prompt version: {e}"));
-    }
 
     AppResponse::ok(
         format!("Create node version {} finished", payload.version),
@@ -195,6 +189,7 @@ pub async fn create_commit(
     }
     if let Err(e) = PromptData::update(prompts::ActiveModel {
         id: Set(payload.prompt_id),
+        latest_version: Set(Some(payload.version.clone())),
         latest_commit: Set(Some(commit.commit_id.clone())),
         ..Default::default()
     })
