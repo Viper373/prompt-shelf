@@ -12,7 +12,7 @@
 
 use std::{path::Path, sync::OnceLock, time::SystemTime};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Ok, Result, anyhow};
 use axum::{Json, http::StatusCode, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use deadpool_redis::Pool;
@@ -193,8 +193,21 @@ impl Prompts {
         node.updated_at = Utc::now();
         Ok(())
     }
-    pub async fn get_content(&self, version: &str, commit_id: &str) -> Result<String> {
-        let save_path = find_commit(&self.id, version, commit_id)?;
+    pub async fn get_commit(&self, version: &str, commit_id: &str) -> Result<PromptCommit> {
+        let node = self
+            .nodes
+            .iter()
+            .find(|n| n.version == version)
+            .ok_or_else(|| anyhow!("Version {} not found!", version))?;
+        let com = node
+            .commits
+            .iter()
+            .find(|c| c.commit_id == commit_id)
+            .ok_or_else(|| anyhow!("Version {} not found!", version))?;
+        Ok(com.to_owned())
+    }
+    pub async fn get_content(prompt_id: &str, version: &str, commit_id: &str) -> Result<String> {
+        let save_path = find_commit(prompt_id, version, commit_id)?;
         let content = fs::read_to_string(save_path).await?;
         Ok(content)
     }

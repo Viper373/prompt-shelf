@@ -82,6 +82,30 @@ pub async fn query_prompt(
     let prompt_config_path = find_config(&prompt.file_key)?;
     Prompts::load(prompt_config_path).await
 }
+
+pub async fn query_latest_prompt(conn: &DatabaseConnection, user_id: i64) -> Result<PromptCommit> {
+    let prompt = match PromptData::find()
+        .filter(prompts::Column::UserId.eq(user_id))
+        .one(conn)
+        .await
+    {
+        Ok(Some(p)) => p,
+        Ok(None) => return Err(anyhow!("Prompt id not exist!")),
+        Err(e) => return Err(anyhow!("Failed to query db: {e}")),
+    };
+    if prompt.latest_version.is_none() || prompt.latest_commit.is_none() {
+        return Err(anyhow!("Invalid prompt commit/version "));
+    }
+    let prompt_config_path = find_config(&prompt.file_key)?;
+    let prompt_config = Prompts::load(prompt_config_path).await?;
+    prompt_config
+        .get_commit(
+            &prompt.latest_version.unwrap(),
+            &prompt.latest_commit.unwrap(),
+        )
+        .await
+}
+
 pub async fn delete_prompt(conn: &DatabaseConnection, user_id: i64, prompt_id: u64) -> Result<()> {
     let prompt = match PromptData::find_by_id(prompt_id)
         .filter(prompts::Column::UserId.eq(user_id))
@@ -93,7 +117,7 @@ pub async fn delete_prompt(conn: &DatabaseConnection, user_id: i64, prompt_id: u
         Err(e) => return Err(anyhow!("Failed to query db: {}", e)),
     };
     Prompts::delete(&prompt.file_key).await?;
-    prompt
+    let _ = prompt
         .delete(conn)
         .await
         .map_err(|e| anyhow!("Failed to delete prompt: {e}"));
@@ -257,6 +281,16 @@ pub async fn query(
     AppResponse::ok("Query prompt finished".to_string(), Some(res))
 }
 
+pub async fn latest(
+    State(data): State<Arc<AppState>>,
+    Extension(claims): Extension<TokenClaims>,
+) -> AppResponse<PromptCommit> {
+    match query_latest_prompt(&data.sql_conn, claims.id).await {
+        Ok(c) => AppResponse::ok("Query successfully".to_string(), Some(c)),
+        Err(e) => AppResponse::internal_err(format!("Query failed: {e}")),
+    }
+}
+
 pub async fn del(
     State(data): State<Arc<AppState>>,
     Extension(claims): Extension<TokenClaims>,
@@ -284,6 +318,7 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
         .route("/create_node", post(create_node))
         .route("/create_commit", post(create_commit))
         .route("/query", get(query))
+        .route("/latest", get(latest))
         .route("/", delete(del))
         .layer(ValidateRequestHeaderLayer::custom(jwt_auth))
         .with_state(app_state)
