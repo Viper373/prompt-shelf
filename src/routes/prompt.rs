@@ -69,17 +69,13 @@ pub async fn create_prompt(
 }
 
 pub async fn query_prompt(
-    app_state: Arc<AppState>,
+    redis_conn: &mut deadpool_redis::Connection,
+    sql_conn: &DatabaseConnection,
     user_id: i64,
     prompt_id: u64,
 ) -> Result<Prompts> {
     let key = format!("user_{}/prompt_{}", user_id, prompt_id);
-    let mut redis_conn = app_state
-        .redis_pool
-        .get()
-        .await
-        .map_err(|e| anyhow!("Failed to get redis conn: {e}"))?;
-    if let Ok(prompt) = get_cache(&key, &mut redis_conn).await {
+    if let Ok(prompt) = get_cache(&key, redis_conn).await {
         return serde_json::from_str(&prompt)
             .map_err(|e| anyhow!("Failed to serialize prompt: {e}"));
     }
@@ -87,7 +83,7 @@ pub async fn query_prompt(
     let prompt = match PromptData::find()
         .filter(prompts::Column::Id.eq(prompt_id))
         .filter(prompts::Column::UserId.eq(Some(user_id)))
-        .one(&app_state.sql_conn)
+        .one(sql_conn)
         .await
     {
         Ok(Some(p)) => p,
@@ -101,7 +97,7 @@ pub async fn query_prompt(
                 &key,
                 serde_json::to_string(&p).unwrap().as_str(),
                 Some(7200),
-                &mut redis_conn,
+                redis_conn,
             )
             .await
             {
@@ -178,7 +174,18 @@ pub async fn create_node(
     Extension(claims): Extension<TokenClaims>,
     Json(payload): Json<NodeInfo>,
 ) -> AppResponse<CreateResponse> {
-    let mut prompt_config = match query_prompt(data, claims.id, payload.prompt_id).await {
+    let mut redis_conn = match data.redis_pool.get().await {
+        Ok(conn) => conn,
+        Err(e) => return AppResponse::internal_err(format!("Failed to get redis conn: {e}")),
+    };
+    let mut prompt_config = match query_prompt(
+        &mut redis_conn,
+        &data.sql_conn,
+        claims.id,
+        payload.prompt_id,
+    )
+    .await
+    {
         Ok(p) => p,
         Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
     };
@@ -188,6 +195,18 @@ pub async fn create_node(
     if let Err(e) = prompt_config.save().await {
         return AppResponse::internal_err(format!("Failed to save prompt config: {e}"));
     }
+
+    let key = format!("user_{}/prompt_{}", claims.id, &payload.prompt_id);
+    if let Err(e) = set_cache(
+        &key,
+        serde_json::to_string(&prompt_config).unwrap().as_str(),
+        Some(7200),
+        &mut redis_conn,
+    )
+    .await
+    {
+        error!("Failed to set key/value: {e}");
+    };
 
     AppResponse::ok(
         format!("Create node version {} finished", payload.version),
@@ -214,7 +233,18 @@ pub async fn create_commit(
     Extension(claims): Extension<TokenClaims>,
     Json(payload): Json<CommitInfo>,
 ) -> AppResponse<CommitResponse> {
-    let mut prompt_config = match query_prompt(data.clone(), claims.id, payload.prompt_id).await {
+    let mut redis_conn = match data.redis_pool.get().await {
+        Ok(conn) => conn,
+        Err(e) => return AppResponse::internal_err(format!("Failed to get redis conn: {e}")),
+    };
+    let mut prompt_config = match query_prompt(
+        &mut redis_conn,
+        &data.sql_conn,
+        claims.id,
+        payload.prompt_id,
+    )
+    .await
+    {
         Ok(p) => p,
         Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
     };
@@ -241,6 +271,18 @@ pub async fn create_commit(
             return AppResponse::internal_err(format!("Failed to update prompt version: {e}"));
         }
     }
+
+    let key = format!("user_{}/prompt_{}", claims.id, &payload.prompt_id);
+    if let Err(e) = set_cache(
+        &key,
+        serde_json::to_string(&prompt_config).unwrap().as_str(),
+        Some(7200),
+        &mut redis_conn,
+    )
+    .await
+    {
+        error!("Failed to set key/value: {e}");
+    };
 
     AppResponse::ok(
         "Create commit finished".to_string(),
@@ -350,10 +392,15 @@ pub async fn query_content(
     Extension(claims): Extension<TokenClaims>,
     Query(params): Query<ContentQueryParams>,
 ) -> AppResponse<String> {
-    let prompt_config = match query_prompt(data, claims.id, params.prompt_id).await {
-        Ok(p) => p,
-        Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
+    let mut redis_conn = match data.redis_pool.get().await {
+        Ok(conn) => conn,
+        Err(e) => return AppResponse::internal_err(format!("Failed to get redis conn: {e}")),
     };
+    let prompt_config =
+        match query_prompt(&mut redis_conn, &data.sql_conn, claims.id, params.prompt_id).await {
+            Ok(p) => p,
+            Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
+        };
     let content =
         match Prompts::get_content(&prompt_config.id(), &params.version, &params.commit_id).await {
             Ok(c) => c,
@@ -394,11 +441,22 @@ pub async fn rollback(
     Extension(claims): Extension<TokenClaims>,
     Json(payload): Json<RollbackInfo>,
 ) -> AppResponse<CreateResponse> {
-    let prompt = match query_prompt(data.clone(), claims.id, payload.prompt_id).await {
-        Ok(p) => p,
-        Err(e) => return AppResponse::internal_err(format!("Config not found: {e}")),
+    let mut redis_conn = match data.redis_pool.get().await {
+        Ok(conn) => conn,
+        Err(e) => return AppResponse::internal_err(format!("Failed to get redis conn: {e}")),
     };
-    if let Err(e) = prompt
+    let prompt_config = match query_prompt(
+        &mut redis_conn,
+        &data.sql_conn,
+        claims.id,
+        payload.prompt_id,
+    )
+    .await
+    {
+        Ok(p) => p,
+        Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
+    };
+    if let Err(e) = prompt_config
         .get_commit(&payload.version, &payload.commit_id)
         .await
     {
