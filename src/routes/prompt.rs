@@ -97,12 +97,16 @@ pub async fn query_prompt(
     let prompt_config_path = find_config(&prompt.file_key)?;
     match Prompts::load(prompt_config_path).await {
         Ok(p) => {
-            let _ = set_cache(
+            if let Err(e) = set_cache(
                 &key,
                 serde_json::to_string(&p).unwrap().as_str(),
                 Some(7200),
                 &mut redis_conn,
-            );
+            )
+            .await
+            {
+                error!("Failed to set key/value: {e}");
+            };
             Ok(p)
         }
         Err(e) => Err(e),
