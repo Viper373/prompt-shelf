@@ -185,15 +185,15 @@ pub async fn create_commit(
         Ok(p) => p,
         Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
     };
-    if let Err(e) = prompt_config.save().await {
-        return AppResponse::internal_err(format!("Failed to save prompt config: {e}"));
-    }
     let commit = PromptCommit::new(claims.email, payload.desp);
     if let Err(e) = prompt_config
         .commit(&payload.version, commit.clone(), &payload.content)
         .await
     {
         return AppResponse::internal_err(format!("Failed to commit prompt: {e}"));
+    }
+    if let Err(e) = prompt_config.save().await {
+        return AppResponse::internal_err(format!("Failed to save prompt config: {e}"));
     }
     if payload.as_latest {
         if let Err(e) = PromptData::update(prompts::ActiveModel {
