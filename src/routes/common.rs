@@ -12,7 +12,7 @@
 
 use std::{path::Path, sync::OnceLock, time::SystemTime};
 
-use anyhow::{Ok, Result, anyhow};
+use anyhow::{Result, anyhow};
 use axum::{Json, http::StatusCode, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use deadpool_redis::Pool;
