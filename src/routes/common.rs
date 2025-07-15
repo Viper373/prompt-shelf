@@ -10,7 +10,11 @@
 //                                                                            //
 // ************************************************************************** //
 
-use std::{path::Path, sync::OnceLock, time::SystemTime};
+use std::{
+    path::Path,
+    sync::{OnceLock, atomic::AtomicBool},
+    time::SystemTime,
+};
 
 use anyhow::{Ok, Result, anyhow};
 use axum::{Json, http::StatusCode, response::IntoResponse};
@@ -32,6 +36,7 @@ pub static START_TIME: OnceLock<SystemTime> = OnceLock::new();
 pub struct AppState {
     pub sql_conn: DatabaseConnection,
     pub config: Config,
+    pub allow_register: AtomicBool,
     pub redis_pool: Pool,
 }
 

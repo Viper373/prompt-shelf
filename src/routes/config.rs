@@ -10,7 +10,7 @@
 //                                                                            //
 // ************************************************************************** //
 
-use std::env;
+use std::{env, sync::atomic::AtomicBool};
 
 use super::middleware::JwtConf;
 

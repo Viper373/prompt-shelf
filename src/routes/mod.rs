@@ -1,4 +1,7 @@
-use std::{env, sync::Arc};
+use std::{
+    env,
+    sync::{Arc, atomic::AtomicBool},
+};
 
 use axum::Router;
 use common::AppState;
@@ -8,6 +11,7 @@ use crate::init::{init_db, redis_pool};
 
 pub mod common;
 pub mod config;
+pub mod control;
 pub mod finder;
 pub mod middleware;
 pub mod prompt;
@@ -22,13 +26,19 @@ pub async fn routes() -> Router {
         env::var("REDIS_URI").unwrap_or("redis://:promptshelf-25@dragonfly:6379".to_string());
     let redis_pool = redis_pool(&redis_uri).await.unwrap();
     let config = Config::from_env();
+    let allow_register = std::env::var("ALLOW_REGISTER")
+        .unwrap_or_else(|_| "true".to_string())
+        .parse::<bool>()
+        .unwrap_or(true);
     let app_state = Arc::new(AppState {
         sql_conn,
         config,
         redis_pool,
+        allow_register: AtomicBool::new(allow_register),
     });
     Router::new()
         .nest("/status", status::routes())
         .nest("/user", user::routes(app_state.clone()))
         .nest("/prompt", prompt::routes(app_state.clone()))
+        .nest("/control", control::routes(app_state.clone()))
 }

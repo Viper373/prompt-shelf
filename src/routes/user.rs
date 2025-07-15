@@ -7,7 +7,9 @@ use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use axum::{Json, Router, extract::State, routing::post};
-use sea_orm::{ActiveValue, ColumnTrait, EntityTrait, QueryFilter, Set, prelude::Expr};
+use sea_orm::{
+    ActiveValue, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set, prelude::Expr,
+};
 use serde::{Deserialize, Serialize};
 
 use super::common::{AppResponse, AppState};
@@ -32,9 +34,16 @@ pub async fn sign_up(
     State(data): State<Arc<AppState>>,
     Json(payload): Json<UserInfo>,
 ) -> AppResponse<ResponseUserInfo> {
+    if !data
+        .allow_register
+        .load(std::sync::atomic::Ordering::Relaxed)
+    {
+        return AppResponse::bad_request("Registration is disabled");
+    }
     if payload.email.is_none() || payload.username.is_none() {
         return AppResponse::bad_request("Missing email or username");
     }
+
     let email = payload.email.unwrap();
     let username = payload.username.unwrap();
 
@@ -50,6 +59,15 @@ pub async fn sign_up(
     {
         return AppResponse::bad_request("User already exists");
     }
+
+    // 查询用户总数
+    let count = match Users::find().count(&data.sql_conn).await {
+        Ok(n) => n,
+        Err(e) => return AppResponse::internal_err(format!("Failed to query db: {e}")),
+    };
+
+    // 如果是第一个用户 -> super_admin，否则普通 user
+    let role = if count == 0 { "super_admin" } else { "user" };
     let salt = SaltString::generate(&mut OsRng);
     let hashed_password = Argon2::default()
         .hash_password(payload.password.as_bytes(), &salt)
@@ -59,6 +77,7 @@ pub async fn sign_up(
         email: ActiveValue::Set(email.clone()),
         password_hash: ActiveValue::Set(hashed_password.clone()),
         username: ActiveValue::Set(username.clone()),
+        role: ActiveValue::Set(role.to_owned()),
         ..Default::default()
     };
     match Users::insert(user_info).exec(&data.sql_conn).await {
@@ -86,6 +105,7 @@ pub async fn sign_in(
     let username = payload.username.unwrap();
     if let Some(user) = Users::find()
         .filter(users::Column::Username.eq(username))
+        .filter(users::Column::Valid.eq(true))
         .one(&data.sql_conn)
         .await
         .unwrap()
