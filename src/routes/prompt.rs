@@ -28,7 +28,7 @@ pub struct PromptInfo {
     name: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CreateResponse {
     id: u64,
 }
