@@ -1,7 +1,10 @@
 use futures::{StreamExt, stream};
 use std::sync::Arc;
 
-use crate::db::prompts::{self, Entity as PromptData};
+use crate::{
+    db::prompts::{self, Entity as PromptData},
+    init::{get_cache, set_cache},
+};
 use anyhow::{Result, anyhow};
 use axum::{
     Extension, Json, Router,
@@ -66,14 +69,25 @@ pub async fn create_prompt(
 }
 
 pub async fn query_prompt(
-    conn: &DatabaseConnection,
+    app_state: Arc<AppState>,
     user_id: i64,
     prompt_id: u64,
 ) -> Result<Prompts> {
+    let key = format!("user_{}/prompt_{}", user_id, prompt_id);
+    let mut redis_conn = app_state
+        .redis_pool
+        .get()
+        .await
+        .map_err(|e| anyhow!("Failed to get redis conn: {e}"))?;
+    if let Ok(prompt) = get_cache(&key, &mut redis_conn).await {
+        return serde_json::from_str(&prompt)
+            .map_err(|e| anyhow!("Failed to serialize prompt: {e}"));
+    }
+
     let prompt = match PromptData::find()
         .filter(prompts::Column::Id.eq(prompt_id))
         .filter(prompts::Column::UserId.eq(Some(user_id)))
-        .one(conn)
+        .one(&app_state.sql_conn)
         .await
     {
         Ok(Some(p)) => p,
@@ -81,7 +95,18 @@ pub async fn query_prompt(
         Err(e) => return Err(anyhow!("Failed to query db: {}", e)),
     };
     let prompt_config_path = find_config(&prompt.file_key)?;
-    Prompts::load(prompt_config_path).await
+    match Prompts::load(prompt_config_path).await {
+        Ok(p) => {
+            let _ = set_cache(
+                &key,
+                serde_json::to_string(&p).unwrap().as_str(),
+                Some(7200),
+                &mut redis_conn,
+            );
+            Ok(p)
+        }
+        Err(e) => Err(e),
+    }
 }
 
 pub async fn query_latest_prompt(
@@ -149,7 +174,7 @@ pub async fn create_node(
     Extension(claims): Extension<TokenClaims>,
     Json(payload): Json<NodeInfo>,
 ) -> AppResponse<CreateResponse> {
-    let mut prompt_config = match query_prompt(&data.sql_conn, claims.id, payload.prompt_id).await {
+    let mut prompt_config = match query_prompt(data, claims.id, payload.prompt_id).await {
         Ok(p) => p,
         Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
     };
@@ -185,7 +210,7 @@ pub async fn create_commit(
     Extension(claims): Extension<TokenClaims>,
     Json(payload): Json<CommitInfo>,
 ) -> AppResponse<CommitResponse> {
-    let mut prompt_config = match query_prompt(&data.sql_conn, claims.id, payload.prompt_id).await {
+    let mut prompt_config = match query_prompt(data.clone(), claims.id, payload.prompt_id).await {
         Ok(p) => p,
         Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
     };
@@ -321,7 +346,7 @@ pub async fn query_content(
     Extension(claims): Extension<TokenClaims>,
     Query(params): Query<ContentQueryParams>,
 ) -> AppResponse<String> {
-    let prompt_config = match query_prompt(&data.sql_conn, claims.id, params.prompt_id).await {
+    let prompt_config = match query_prompt(data, claims.id, params.prompt_id).await {
         Ok(p) => p,
         Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
     };
@@ -353,6 +378,50 @@ pub async fn del(
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct RollbackInfo {
+    prompt_id: u64,
+    version: String,
+    commit_id: String,
+}
+
+pub async fn rollback(
+    State(data): State<Arc<AppState>>,
+    Extension(claims): Extension<TokenClaims>,
+    Json(payload): Json<RollbackInfo>,
+) -> AppResponse<CreateResponse> {
+    let prompt = match query_prompt(data.clone(), claims.id, payload.prompt_id).await {
+        Ok(p) => p,
+        Err(e) => return AppResponse::internal_err(format!("Config not found: {e}")),
+    };
+    if let Err(e) = prompt
+        .get_commit(&payload.version, &payload.commit_id)
+        .await
+    {
+        return AppResponse::internal_err(format!(
+            "Commit not found for prompt_id={}, version={}, commit_id={}, err={}",
+            payload.prompt_id, payload.version, payload.commit_id, e
+        ));
+    }
+    if let Err(e) = PromptData::update(prompts::ActiveModel {
+        id: Set(payload.prompt_id),
+        latest_version: Set(Some(payload.version.clone())),
+        latest_commit: Set(Some(payload.commit_id.clone())),
+        ..Default::default()
+    })
+    .exec(&data.sql_conn)
+    .await
+    {
+        return AppResponse::internal_err(format!("Update failed: {e}"));
+    }
+    AppResponse::ok(
+        "Rollback successful".into(),
+        Some(CreateResponse {
+            id: payload.prompt_id,
+        }),
+    )
+}
+
 pub fn routes(app_state: Arc<AppState>) -> Router {
     let jwt_auth = JwtAuth {
         conf: Arc::new(app_state.config.jwt_conf.clone()),
@@ -364,6 +433,7 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
         .route("/query", get(query))
         .route("/latest", get(latest))
         .route("/content", get(query_content))
+        .route("/rollback", post(rollback))
         .route("/", delete(del))
         .layer(ValidateRequestHeaderLayer::custom(jwt_auth))
         .with_state(app_state)
