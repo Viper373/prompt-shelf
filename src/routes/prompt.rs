@@ -161,6 +161,7 @@ pub struct CommitInfo {
     version: String,
     desp: String,
     content: String,
+    as_latest: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -187,16 +188,18 @@ pub async fn create_commit(
     {
         return AppResponse::internal_err(format!("Failed to commit prompt: {e}"));
     }
-    if let Err(e) = PromptData::update(prompts::ActiveModel {
-        id: Set(payload.prompt_id),
-        latest_version: Set(Some(payload.version.clone())),
-        latest_commit: Set(Some(commit.commit_id.clone())),
-        ..Default::default()
-    })
-    .exec(&data.sql_conn)
-    .await
-    {
-        return AppResponse::internal_err(format!("Failed to update prompt version: {e}"));
+    if payload.as_latest {
+        if let Err(e) = PromptData::update(prompts::ActiveModel {
+            id: Set(payload.prompt_id),
+            latest_version: Set(Some(payload.version.clone())),
+            latest_commit: Set(Some(commit.commit_id.clone())),
+            ..Default::default()
+        })
+        .exec(&data.sql_conn)
+        .await
+        {
+            return AppResponse::internal_err(format!("Failed to update prompt version: {e}"));
+        }
     }
 
     AppResponse::ok(
