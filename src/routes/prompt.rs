@@ -71,7 +71,7 @@ pub async fn query_prompt(
     prompt_id: u64,
 ) -> Result<Prompts> {
     let prompt = match PromptData::find_by_id(prompt_id)
-        .filter(prompts::Column::UserId.eq(user_id))
+        .filter(prompts::Column::UserId.eq(Some(user_id)))
         .one(conn)
         .await
     {
@@ -85,7 +85,7 @@ pub async fn query_prompt(
 
 pub async fn query_latest_prompt(conn: &DatabaseConnection, user_id: i64) -> Result<PromptCommit> {
     let prompt = match PromptData::find()
-        .filter(prompts::Column::UserId.eq(user_id))
+        .filter(prompts::Column::UserId.eq(Some(user_id)))
         .one(conn)
         .await
     {
@@ -238,7 +238,7 @@ pub async fn query(
     }
     let prompt_list = match PromptData::find()
         .filter(filter_condition)
-        .filter(prompts::Column::UserId.eq(claims.id))
+        .filter(prompts::Column::UserId.eq(Some(claims.id)))
         .all(&data.sql_conn)
         .await
     {
