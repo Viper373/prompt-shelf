@@ -216,4 +216,24 @@ impl Prompts {
         let content = fs::read_to_string(save_path).await?;
         Ok(content)
     }
+    pub async fn prev_commit(&self, version: &str, commit_id: &str) -> Result<String> {
+        let node = self
+            .nodes
+            .iter()
+            .find(|n| n.version == version)
+            .ok_or_else(|| anyhow!("Version {} not found!", version))?;
+        let idx = node
+            .commits
+            .iter()
+            .position(|c| c.commit_id == commit_id)
+            .ok_or_else(|| anyhow!("Commit ID not found"))?;
+        if idx == 0 {
+            return Err(anyhow!("No previous commit id found"));
+        }
+        let prev_commit = node
+            .commits
+            .get(idx - 1)
+            .ok_or_else(|| anyhow!("Previous commit not found"))?;
+        Ok(prev_commit.commit_id.clone())
+    }
 }

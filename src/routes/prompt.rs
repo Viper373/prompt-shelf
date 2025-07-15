@@ -426,6 +426,67 @@ pub async fn rollback(
     )
 }
 
+#[derive(Debug, Deserialize)]
+pub struct RevertInfo {
+    prompt_id: u64,
+}
+
+pub async fn revert(
+    State(data): State<Arc<AppState>>,
+    Extension(claims): Extension<TokenClaims>,
+    Json(payload): Json<RevertInfo>,
+) -> AppResponse<CreateResponse> {
+    let prompt = match PromptData::find()
+        .filter(prompts::Column::Id.eq(payload.prompt_id))
+        .filter(prompts::Column::UserId.eq(Some(claims.id)))
+        .one(&data.sql_conn)
+        .await
+    {
+        Ok(Some(p)) => p,
+        Ok(None) => return AppResponse::bad_request(format!("Prompt id not exist!")),
+        Err(e) => return AppResponse::internal_err(format!("Failed to query db: {e}")),
+    };
+    let prompt_config_path = match find_config(&prompt.file_key) {
+        Ok(p) => p,
+        Err(e) => return AppResponse::internal_err(format!("Failed to find path: {e}")),
+    };
+
+    let prompt_config = match Prompts::load(prompt_config_path).await {
+        Ok(p) => p,
+        Err(e) => return AppResponse::internal_err(format!("Config not found: {e}")),
+    };
+    if prompt.latest_version.is_none() || prompt.latest_commit.is_none() {
+        return AppResponse::bad_request(format!("Invalid prompt commit/version "));
+    }
+
+    let prev_cid = match prompt_config
+        .prev_commit(
+            &prompt.latest_version.unwrap(),
+            &prompt.latest_commit.unwrap(),
+        )
+        .await
+    {
+        Ok(cid) => cid,
+        Err(e) => return AppResponse::internal_err(format!("Prev commit not found: {e}")),
+    };
+    if let Err(e) = PromptData::update(prompts::ActiveModel {
+        id: Set(payload.prompt_id),
+        latest_commit: Set(Some(prev_cid.clone())),
+        ..Default::default()
+    })
+    .exec(&data.sql_conn)
+    .await
+    {
+        return AppResponse::internal_err(format!("Update failed: {e}"));
+    }
+    AppResponse::ok(
+        "Revert successful".into(),
+        Some(CreateResponse {
+            id: payload.prompt_id,
+        }),
+    )
+}
+
 pub fn routes(app_state: Arc<AppState>) -> Router {
     let jwt_auth = JwtAuth {
         conf: Arc::new(app_state.config.jwt_conf.clone()),
@@ -438,6 +499,7 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
         .route("/latest", get(latest))
         .route("/content", get(query_content))
         .route("/rollback", post(rollback))
+        .route("/revert", post(revert))
         .route("/", delete(del))
         .layer(ValidateRequestHeaderLayer::custom(jwt_auth))
         .with_state(app_state)
