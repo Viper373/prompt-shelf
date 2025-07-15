@@ -83,8 +83,12 @@ pub async fn query_prompt(
     Prompts::load(prompt_config_path).await
 }
 
-pub async fn query_latest_prompt(conn: &DatabaseConnection, user_id: i64) -> Result<PromptCommit> {
-    let prompt = match PromptData::find()
+pub async fn query_latest_prompt(
+    conn: &DatabaseConnection,
+    user_id: i64,
+    prompt_id: u64,
+) -> Result<PromptCommit> {
+    let prompt = match PromptData::find_by_id(prompt_id)
         .filter(prompts::Column::UserId.eq(Some(user_id)))
         .one(conn)
         .await
@@ -284,8 +288,9 @@ pub async fn query(
 pub async fn latest(
     State(data): State<Arc<AppState>>,
     Extension(claims): Extension<TokenClaims>,
+    Query(params): Query<CreateResponse>,
 ) -> AppResponse<PromptCommit> {
-    match query_latest_prompt(&data.sql_conn, claims.id).await {
+    match query_latest_prompt(&data.sql_conn, claims.id, params.id).await {
         Ok(c) => AppResponse::ok("Query successfully".to_string(), Some(c)),
         Err(e) => AppResponse::internal_err(format!("Query failed: {e}")),
     }
