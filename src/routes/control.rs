@@ -135,7 +135,7 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
         .route("/register", post(allow_register))
         .route("/list/user", get(all_user))
         .route("/user/{user_id}", delete(delete_user))
-        .route("/disiable/user", post(user_control))
+        .route("/disable/user", post(user_control))
         .layer(ValidateRequestHeaderLayer::custom(jwt_auth))
         .with_state(app_state)
 }
