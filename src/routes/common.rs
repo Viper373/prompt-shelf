@@ -66,37 +66,41 @@ impl AppCode {
 
 #[derive(Debug, Serialize)]
 pub struct AppResponse<T: Serialize> {
-    code: AppCode,
+    status: AppCode,
     msg: String,
     result: Option<T>,
 }
 impl<T: Serialize> IntoResponse for AppResponse<T> {
     fn into_response(self) -> axum::response::Response {
-        let res = Json(json!({"code":self.code, "msg":self.msg, "result":self.result}));
-        (self.code.http_status(), res).into_response()
+        let res = Json(json!({"status":self.status, "msg":self.msg, "result":self.result}));
+        (self.status.http_status(), res).into_response()
     }
 }
 impl<T: Serialize> AppResponse<T> {
     pub fn new(code: AppCode, msg: String, result: Option<T>) -> Self {
-        Self { code, msg, result }
+        Self {
+            status: code,
+            msg,
+            result,
+        }
     }
     pub fn ok(msg: String, result: Option<T>) -> Self {
         Self {
-            code: AppCode::Success,
+            status: AppCode::Success,
             msg,
             result,
         }
     }
     pub fn bad_request(msg: impl Into<String>) -> Self {
         Self {
-            code: AppCode::BadRequest,
+            status: AppCode::BadRequest,
             msg: msg.into(),
             result: None,
         }
     }
     pub fn internal_err(msg: impl Into<String>) -> Self {
         Self {
-            code: AppCode::InternalError,
+            status: AppCode::InternalError,
             msg: msg.into(),
             result: None,
         }
