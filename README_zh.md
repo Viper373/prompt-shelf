@@ -30,7 +30,7 @@ docker-compose logs -f
 - `ALLOW_REGISTER`：是否允许用户注册(true/false)
 
 ## API文档
-详细的API文档，请参考[HTML文档](./doc/PromptShelf.html)
+详细的API文档，请参考[Markdown文档](./doc/PromptShelf.md)
 
 ### 核心API端点摘要
 
@@ -54,6 +54,8 @@ docker-compose logs -f
 #### 管理员控制
 - `POST /control/register`：切换用户注册功能
 - `GET /control/list/user`：列出所有用户(仅管理员)
+- `DELETE /control/user/{user_id}`: 删除用户
+- `POST /control/disable/user`: 禁用/启用用户
 
 ## 项目结构
 ```

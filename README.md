@@ -40,7 +40,7 @@ The following environment variables can be configured in the docker-compose.yml 
 
 ## API Documentation
 
-For detailed API documentation, please refer to the [HTML documentation](./doc/PromptShelf.html)
+For detailed API documentation, please refer to the [Markdown documentation](./doc/PromptShelf.md)
 
 ### Key API Endpoints Summary
 
@@ -77,6 +77,9 @@ For detailed API documentation, please refer to the [HTML documentation](./doc/P
 |--------|-------------------------|--------------------------------------|
 | POST   | /control/register       | Enable/disable user registration     |
 | GET    | /control/list/user      | List all users (admin only)          |
+| DELETE    | /control/user/{user_id}      | delete users (admin only)          |
+| POST  | /control/disable/user      | disable/enable users (admin only)          |
+
 
 ## Project Structure
 
