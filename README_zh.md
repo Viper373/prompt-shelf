@@ -35,6 +35,7 @@ PromptShelf是一个基于Rust构建的提示词版本控制系统，提供类�
 
 ### 使用Docker Compose
 ```bash
+cargo build --profile fast
 # 启动所有服务
 docker-compose up --build -d
 
