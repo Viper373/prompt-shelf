@@ -66,7 +66,7 @@ docker-compose logs -f
 │   │   ├── user.rs   # 用户认证接口
 │   │   └── ...
 │   └── main.rs       # 应用入口
-├── app/              # 前端React应用
+├── app/              # 前端网页(todo)
 ├── doc/              # 文档文件
 └── docker-compose.yml # Docker配置
 ```

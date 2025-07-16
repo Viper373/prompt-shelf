@@ -89,7 +89,7 @@ prompt-shelf/
 │   ├── db/              # Database models
 │   ├── routes/          # API route handlers
 │   └── main.rs          # Application entry point
-├── app/                 # Frontend application
+├── app/                 # Frontend application(todo)
 ├── conf/                # Configuration files
 ├── docker-compose.yml   # Docker Compose configuration
 └── Cargo.toml           # Rust dependencies
