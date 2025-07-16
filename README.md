@@ -39,15 +39,11 @@ Key benefits:
    ```bash
    cd prompt-shelf
    ```
-3. Build with cargo:
-   ```bash
-    cargo build --profile fast
-   ```
-4. Start the services using Docker Compose:
+3. Start the services using Docker Compose:
    ```bash
    docker-compose up --build -d
    ```
-5. The API server will be available at http://localhost:8000
+4. The API server will be available at http://localhost:8000
 
 ## Environment Configuration
 
