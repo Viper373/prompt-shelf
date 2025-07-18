@@ -88,8 +88,11 @@ POST /user/signup
 {
   "msg": "string",
   "result": {
+    "email": "string",
     "id": 0,
-    "token": "string"
+    "role": "string",
+    "token": "string",
+    "username": "string"
   },
   "status": "string"
 }
@@ -109,8 +112,11 @@ POST /user/signup
 |---|---|---|---|---|---|
 |» msg|string|true|none||none|
 |» result|object|true|none||none|
+|»» email|string|true|none||none|
 |»» id|integer|true|none||none|
+|»» role|string|true|none||none|
 |»» token|string|true|none||none|
+|»» username|string|true|none||none|
 |» status|string|true|none||none|
 
 ## POST 登录
@@ -142,8 +148,11 @@ POST /user/signin
 {
   "msg": "string",
   "result": {
+    "email": "string",
     "id": 0,
-    "token": "string"
+    "role": "string",
+    "token": "string",
+    "username": "string"
   },
   "status": "string"
 }
@@ -163,8 +172,11 @@ POST /user/signin
 |---|---|---|---|---|---|
 |» msg|string|true|none||none|
 |» result|object|true|none||none|
+|»» email|string|true|none||none|
 |»» id|integer|true|none||none|
+|»» role|string|true|none||none|
 |»» token|string|true|none||none|
+|»» username|string|true|none||none|
 |» status|string|true|none||none|
 
 ## POST 创建提示词/项目
