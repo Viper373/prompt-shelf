@@ -28,6 +28,9 @@ pub struct UserInfo {
 #[derive(Serialize)]
 pub struct ResponseUserInfo {
     id: i64,
+    username: String,
+    email: String,
+    role: String,
     token: String,
 }
 pub async fn sign_up(
@@ -84,8 +87,11 @@ pub async fn sign_up(
         Ok(user) => match encode_jwt(user.last_insert_id, &email, &data.config.jwt_conf) {
             Ok(token) => {
                 let response_data = ResponseUserInfo {
+                    username,
+                    email,
                     token,
                     id: user.last_insert_id,
+                    role: role.to_string(),
                 };
                 AppResponse::ok("User sign up succeed.".to_string(), Some(response_data))
             }
@@ -104,7 +110,7 @@ pub async fn sign_in(
     }
     let email = payload.email.unwrap();
     if let Some(user) = Users::find()
-        .filter(users::Column::Email.eq(email))
+        .filter(users::Column::Email.eq(&email))
         .filter(users::Column::Valid.eq(true))
         .one(&data.sql_conn)
         .await
@@ -130,7 +136,13 @@ pub async fn sign_in(
                             "Failed to update updated_at field, {e}"
                         ));
                     }
-                    let response_data = ResponseUserInfo { token, id: user.id };
+                    let response_data = ResponseUserInfo {
+                        token,
+                        email,
+                        username: user.username,
+                        id: user.id,
+                        role: user.role,
+                    };
                     return AppResponse::ok(
                         "User login successfully".to_string(),
                         Some(response_data),
