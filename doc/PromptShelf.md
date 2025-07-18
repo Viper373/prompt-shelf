@@ -121,7 +121,7 @@ POST /user/signin
 
 ```json
 {
-  "username": "string",
+  "email": "string",
   "password": "string"
 }
 ```
@@ -131,7 +131,7 @@ POST /user/signin
 |名称|位置|类型|必选|说明|
 |---|---|---|---|---|
 |body|body|object| 否 |none|
-|» username|body|string| 是 |none|
+|» email|body|string| 是 |none|
 |» password|body|string| 是 |none|
 
 > 返回示例
