@@ -17,7 +17,7 @@ use super::common::{AppResponse, AppState};
 #[derive(Deserialize)]
 pub struct UserInfo {
     #[serde(default)]
-    pub username: Option<String>,
+    pub email: Option<String>,
 
     #[serde(default)]
     pub email: Option<String>,
@@ -99,12 +99,12 @@ pub async fn sign_in(
     State(data): State<Arc<AppState>>,
     Json(payload): Json<UserInfo>,
 ) -> AppResponse<ResponseUserInfo> {
-    if payload.username.is_none() {
-        return AppResponse::bad_request("Username is required");
+    if payload.email.is_none() {
+        return AppResponse::bad_request("User email is required");
     }
-    let username = payload.username.unwrap();
+    let email = payload.email.unwrap();
     if let Some(user) = Users::find()
-        .filter(users::Column::Username.eq(username))
+        .filter(users::Column::Email.eq(email))
         .filter(users::Column::Valid.eq(true))
         .one(&data.sql_conn)
         .await
