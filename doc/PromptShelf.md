@@ -851,5 +851,60 @@ DELETE /control/user/{user_id}
 |» result|null|true|none||none|
 |» status|string|true|none||none|
 
+## GET 获取prompt版本列表
+
+GET /prompt/list_version
+
+### 请求参数
+
+|名称|位置|类型|必选|说明|
+|---|---|---|---|---|
+|prompt_id|query|number| 是 |none|
+|Authorization|header|string| 是 |none|
+
+> 返回示例
+
+> 200 Response
+
+```json
+{}
+```
+
+### 返回结果
+
+|状态码|状态码含义|说明|数据模型|
+|---|---|---|---|
+|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|none|Inline|
+
+### 返回数据结构
+
+## GET 获取commits列表
+
+GET /prompt/list_commit
+
+### 请求参数
+
+|名称|位置|类型|必选|说明|
+|---|---|---|---|---|
+|prompt_id|query|number| 是 |none|
+|version|query|string| 是 |none|
+|Authorization|header|string| 是 |none|
+
+> 返回示例
+
+> 200 Response
+
+```json
+{}
+```
+
+### 返回结果
+
+|状态码|状态码含义|说明|数据模型|
+|---|---|---|---|
+|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|none|Inline|
+
+### 返回数据结构
+
 # 数据模型
 
