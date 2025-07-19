@@ -182,6 +182,17 @@ impl Prompts {
         Ok(())
     }
 
+    pub fn list_version(&self) -> Vec<String> {
+        self.nodes.iter().map(|n| n.version.clone()).collect()
+    }
+    pub fn list_commits(&self, version: &str) -> Vec<String> {
+        self.nodes
+            .iter()
+            .filter(|n| n.version == version)
+            .flat_map(|n| n.commits.iter())
+            .map(|c| c.commit_id.clone())
+            .collect()
+    }
     pub async fn create_version(&mut self, version: &str) -> Result<()> {
         if self.nodes.iter().any(|n| n.version == version) {
             return Err(anyhow!("Version {} already exists!", version));

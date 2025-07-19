@@ -74,7 +74,7 @@ pub async fn query_prompt(
     user_id: i64,
     prompt_id: u64,
 ) -> Result<Prompts> {
-    let key = format!("user_{}/prompt_{}", user_id, prompt_id);
+    let key = format!("user_{user_id}/prompt_{prompt_id}");
     if let Ok(prompt) = get_cache(&key, redis_conn).await {
         return serde_json::from_str(&prompt)
             .map_err(|e| anyhow!("Failed to serialize prompt: {e}"));
@@ -501,7 +501,7 @@ pub async fn revert(
         .await
     {
         Ok(Some(p)) => p,
-        Ok(None) => return AppResponse::bad_request(format!("Prompt id not exist!")),
+        Ok(None) => return AppResponse::bad_request("Prompt id not exist!"),
         Err(e) => return AppResponse::internal_err(format!("Failed to query db: {e}")),
     };
     let prompt_config_path = match find_config(&prompt.file_key) {
@@ -514,7 +514,7 @@ pub async fn revert(
         Err(e) => return AppResponse::internal_err(format!("Config not found: {e}")),
     };
     if prompt.latest_version.is_none() || prompt.latest_commit.is_none() {
-        return AppResponse::bad_request(format!("Invalid prompt commit/version "));
+        return AppResponse::bad_request("Invalid prompt commit/version ");
     }
 
     let prev_cid = match prompt_config
@@ -545,6 +545,54 @@ pub async fn revert(
     )
 }
 
+pub async fn list_version(
+    State(data): State<Arc<AppState>>,
+    Extension(claims): Extension<TokenClaims>,
+    Query(payload): Query<RevertInfo>,
+) -> AppResponse<Vec<String>> {
+    let mut redis_conn = match data.redis_pool.get().await {
+        Ok(conn) => conn,
+        Err(e) => return AppResponse::internal_err(format!("Failed to get redis conn: {e}")),
+    };
+    let prompt_config = match query_prompt(
+        &mut redis_conn,
+        &data.sql_conn,
+        claims.id,
+        payload.prompt_id,
+    )
+    .await
+    {
+        Ok(p) => p,
+        Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
+    };
+    let vers = prompt_config.list_version();
+    AppResponse::ok("List version finished".to_string(), Some(vers))
+}
+
+pub async fn list_commits(
+    State(data): State<Arc<AppState>>,
+    Extension(claims): Extension<TokenClaims>,
+    Query(payload): Query<NodeInfo>,
+) -> AppResponse<Vec<String>> {
+    let mut redis_conn = match data.redis_pool.get().await {
+        Ok(conn) => conn,
+        Err(e) => return AppResponse::internal_err(format!("Failed to get redis conn: {e}")),
+    };
+    let prompt_config = match query_prompt(
+        &mut redis_conn,
+        &data.sql_conn,
+        claims.id,
+        payload.prompt_id,
+    )
+    .await
+    {
+        Ok(p) => p,
+        Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
+    };
+    let commits = prompt_config.list_commits(&payload.version);
+    AppResponse::ok("List commits finished".to_string(), Some(commits))
+}
+
 pub fn routes(app_state: Arc<AppState>) -> Router {
     let jwt_auth = JwtAuth {
         conf: Arc::new(app_state.config.jwt_conf.clone()),
@@ -558,6 +606,8 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
         .route("/content", get(query_content))
         .route("/rollback", post(rollback))
         .route("/revert", post(revert))
+        .route("/list_version", get(list_version))
+        .route("/list_commit", get(list_commits))
         .route("/", delete(del))
         .layer(ValidateRequestHeaderLayer::custom(jwt_auth))
         .with_state(app_state)

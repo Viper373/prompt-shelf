@@ -43,7 +43,7 @@ pub async fn allow_register(
     Json(payload): Json<ControlParams>,
 ) -> AppResponse<String> {
     if !is_admin(claims.id, &data.sql_conn).await {
-        return AppResponse::internal_err(format!("Only super_admin can perform this action"));
+        return AppResponse::internal_err("Only super_admin can perform this action");
     }
     data.allow_register.store(
         payload.enable_register,
@@ -67,7 +67,7 @@ pub async fn all_user(
     Extension(claims): Extension<TokenClaims>,
 ) -> AppResponse<Vec<UserInfo>> {
     if !is_admin(claims.id, &data.sql_conn).await {
-        return AppResponse::internal_err(format!("Only super_admin can perform this action"));
+        return AppResponse::internal_err("Only super_admin can perform this action");
     }
     let users = match Users::find().all(&data.sql_conn).await {
         Ok(u) => u,
@@ -94,11 +94,11 @@ pub async fn delete_user(
     Path(user_id): Path<i64>,
 ) -> AppResponse<String> {
     if !is_admin(claims.id, &data.sql_conn).await {
-        return AppResponse::internal_err(format!("Only super_admin can perform this action"));
+        return AppResponse::internal_err("Only super_admin can perform this action");
     }
     match Users::delete_by_id(user_id).exec(&data.sql_conn).await {
-        Ok(_) => return AppResponse::ok(format!("User {user_id} has been deleted"), None),
-        Err(e) => return AppResponse::internal_err(format!("Failed to delete users: {e}")),
+        Ok(_) => AppResponse::ok(format!("User {user_id} has been deleted"), None),
+        Err(e) => AppResponse::internal_err(format!("Failed to delete users: {e}")),
     }
 }
 
@@ -114,7 +114,7 @@ pub async fn user_control(
     Json(payload): Json<UserControlInfo>,
 ) -> AppResponse<String> {
     if !is_admin(claims.id, &data.sql_conn).await {
-        return AppResponse::internal_err(format!("Only super_admin can perform this action"));
+        return AppResponse::internal_err("Only super_admin can perform this action");
     }
     let invalid_user = users::ActiveModel {
         id: Set(payload.user_id),
@@ -122,8 +122,8 @@ pub async fn user_control(
         ..Default::default()
     };
     match Users::update(invalid_user).exec(&data.sql_conn).await {
-        Ok(_) => return AppResponse::ok(format!("User status has been changed"), None),
-        Err(e) => return AppResponse::internal_err(format!("Failed to delete users: {e}")),
+        Ok(_) => AppResponse::ok("User status has been changed".to_string(), None),
+        Err(e) => AppResponse::internal_err(format!("Failed to delete users: {e}")),
     }
 }
 
