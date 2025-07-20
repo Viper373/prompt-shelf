@@ -906,5 +906,108 @@ GET /prompt/list_commit
 
 ### 返回数据结构
 
+## POST 新增用户
+
+POST /control/add/user
+
+> Body 请求参数
+
+```json
+{
+  "username": "string",
+  "email": "string",
+  "role": "user",
+  "valid": true,
+  "password": "string"
+}
+```
+
+### 请求参数
+
+|名称|位置|类型|必选|说明|
+|---|---|---|---|---|
+|Authorization|header|string| 是 |none|
+|body|body|object| 否 |none|
+|» username|body|string| 是 |none|
+|» email|body|string| 是 |none|
+|» role|body|string| 是 |none|
+|» valid|body|boolean| 是 |none|
+|» password|body|string| 是 |none|
+
+#### 枚举值
+
+|属性|值|
+|---|---|
+|» role|user|
+|» role|super_admin|
+
+> 返回示例
+
+> 200 Response
+
+```json
+{}
+```
+
+### 返回结果
+
+|状态码|状态码含义|说明|数据模型|
+|---|---|---|---|
+|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|none|Inline|
+
+### 返回数据结构
+
+## POST 更新用户信息
+
+POST /control/update/user/{user_id}
+
+> Body 请求参数
+
+```json
+{
+  "username": "string",
+  "email": "string",
+  "password": "string",
+  "role": "user",
+  "valid": true
+}
+```
+
+### 请求参数
+
+|名称|位置|类型|必选|说明|
+|---|---|---|---|---|
+|user_id|path|number| 是 |none|
+|Authorization|header|string| 是 |none|
+|body|body|object| 否 |none|
+|» username|body|string| 否 |none|
+|» email|body|string| 否 |none|
+|» password|body|string| 否 |none|
+|» role|body|string| 否 |none|
+|» valid|body|boolean| 否 |none|
+
+#### 枚举值
+
+|属性|值|
+|---|---|
+|» role|user|
+|» role|super_admin|
+
+> 返回示例
+
+> 200 Response
+
+```json
+{}
+```
+
+### 返回结果
+
+|状态码|状态码含义|说明|数据模型|
+|---|---|---|---|
+|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|none|Inline|
+
+### 返回数据结构
+
 # 数据模型
 
