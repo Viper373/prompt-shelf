@@ -29,6 +29,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:80"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./conf/nginx.conf:/etc/nginx/nginx.conf
     restart: always
     depends_on:
       - prompt-shelf
