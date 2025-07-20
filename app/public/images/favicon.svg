@@ -1,0 +1,15 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 书架轮廓 -->
+  <rect x="8" y="8" width="48" height="48" rx="4" stroke="#4A90E2" stroke-width="3" fill="#E6F0FA"/>
+  <!-- 书架三层 -->
+  <line x1="8" y1="22" x2="56" y2="22" stroke="#4A90E2" stroke-width="2"/>
+  <line x1="8" y1="36" x2="56" y2="36" stroke="#4A90E2" stroke-width="2"/>
+  <line x1="8" y1="50" x2="56" y2="50" stroke="#4A90E2" stroke-width="2"/>
+  <!-- prompt 图标，左侧带气泡 -->
+  <path d="M42 18h8v10h-8v-10z" fill="#4A90E2"/>
+  <path d="M42 30h8v10h-8v-10z" fill="#4A90E2"/>
+  <path d="M42 42h8v10h-8v-10z" fill="#4A90E2"/>
+  <circle cx="38" cy="14" r="6" stroke="#4A90E2" stroke-width="2" fill="white"/>
+  <path d="M36 12 L38 10 L40 12" stroke="#4A90E2" stroke-width="1.5" fill="none"/>
+  <path d="M38 10 L38 16" stroke="#4A90E2" stroke-width="1.5"/>
+</svg>
