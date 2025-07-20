@@ -10,6 +10,9 @@
 
 PromptShelf通过提供专为AI提示词设计的类Git版本控制系统来解决这些挑战。
 
+## 预览
+![Web UI](./doc/preview/截屏2025-07-20 20.32.23.png)
+![Web UI](./doc/preview/截屏2025-07-20 20.33.05.png)
 ## 系统概述
 PromptShelf是一个基于Rust构建的提示词版本控制系统，提供类似Git的功能来管理提示词的创建、版本跟踪和历史查询。
 
@@ -87,7 +90,7 @@ docker-compose logs -f
 │   │   ├── user.rs   # 用户认证接口
 │   │   └── ...
 │   └── main.rs       # 应用入口
-├── app/              # 前端网页(todo)
+├── app/              # 前端网页
 ├── doc/              # 文档文件
 └── docker-compose.yml # Docker配置
 ```

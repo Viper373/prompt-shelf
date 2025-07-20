@@ -27,6 +27,9 @@ Key benefits:
 - Maintain cleaner codebase with separated concerns
 - Enable A/B testing of prompts without code changes
 
+## Preview
+![Web UI](./doc/preview/截屏2025-07-20 20.32.23.png)
+![Web UI](./doc/preview/截屏2025-07-20 20.33.05.png)
 ## Quick Start
 
 ### Prerequisites
@@ -106,7 +109,7 @@ prompt-shelf/
 │   ├── db/              # Database models
 │   ├── routes/          # API route handlers
 │   └── main.rs          # Application entry point
-├── app/                 # Frontend application(todo)
+├── app/                 # Frontend application
 ├── conf/                # Configuration files
 ├── docker-compose.yml   # Docker Compose configuration
 └── Cargo.toml           # Rust dependencies
