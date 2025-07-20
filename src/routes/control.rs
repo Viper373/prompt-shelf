@@ -1,13 +1,19 @@
 use crate::db::users::{self, Entity as Users};
 use std::sync::Arc;
 
+use argon2::{
+    Argon2,
+    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
+};
 use axum::{
     Extension, Json, Router,
     extract::{Path, State},
     routing::{delete, get, post},
 };
 use chrono::{DateTime, Utc};
-use sea_orm::{ActiveValue::Set, DatabaseConnection, EntityTrait};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, DatabaseConnection, EntityTrait, IntoActiveModel,
+};
 use serde::{Deserialize, Serialize};
 use tower_http::validate_request::ValidateRequestHeaderLayer;
 use tracing::error;
@@ -127,6 +133,96 @@ pub async fn user_control(
     }
 }
 
+#[derive(Deserialize)]
+pub struct AddUserInfo {
+    username: String,
+    email: String,
+    role: String,
+    valid: bool,
+    password: String,
+}
+
+pub async fn add_user(
+    State(data): State<Arc<AppState>>,
+    Extension(claims): Extension<TokenClaims>,
+    Json(payload): Json<AddUserInfo>,
+) -> AppResponse<String> {
+    if !is_admin(claims.id, &data.sql_conn).await {
+        return AppResponse::internal_err("Only super_admin can perform this action");
+    }
+    let salt = SaltString::generate(&mut OsRng);
+    let hashed_password = Argon2::default()
+        .hash_password(payload.password.as_bytes(), &salt)
+        .unwrap()
+        .to_string();
+    let new_user = users::ActiveModel {
+        username: Set(payload.username),
+        email: Set(payload.email),
+        password_hash: Set(hashed_password),
+        role: Set(payload.role),
+        valid: Set(payload.valid as i8),
+        ..Default::default()
+    };
+    match Users::insert(new_user).exec(&data.sql_conn).await {
+        Ok(_) => AppResponse::ok("User has been added".to_string(), None),
+        Err(e) => AppResponse::internal_err(format!("Failed to add user: {e}")),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct UpdateUserInfo {
+    pub username: Option<String>,
+    pub email: Option<String>,
+    pub password: Option<String>,
+    pub role: Option<String>,
+    pub valid: Option<bool>,
+}
+pub async fn update_user(
+    State(data): State<Arc<AppState>>,
+    Extension(claims): Extension<TokenClaims>,
+    Path(user_id): Path<i32>,
+    Json(payload): Json<UpdateUserInfo>,
+) -> AppResponse<String> {
+    if !is_admin(claims.id, &data.sql_conn).await {
+        return AppResponse::internal_err("Only super_admin can perform this action");
+    }
+
+    // 查询该用户的ActiveModel（sea-orm 通过 find_by_id）
+    let mut user: users::ActiveModel = match Users::find_by_id(user_id).one(&data.sql_conn).await {
+        Ok(Some(u)) => u.into_active_model(),
+        Ok(None) => return AppResponse::bad_request("User not found"),
+        Err(e) => return AppResponse::internal_err(format!("DB error: {e}")),
+    };
+
+    if let Some(username) = payload.username {
+        user.username = Set(username);
+    }
+    if let Some(email) = payload.email {
+        user.email = Set(email);
+    }
+    if let Some(role) = payload.role {
+        user.role = Set(role);
+    }
+    if let Some(valid) = payload.valid {
+        user.valid = Set(valid as i8);
+    }
+
+    // 密码单独处理，修改时哈希
+    if let Some(password) = payload.password {
+        let salt = SaltString::generate(&mut OsRng);
+        let hashed_password = Argon2::default()
+            .hash_password(password.as_bytes(), &salt)
+            .unwrap()
+            .to_string();
+        user.password_hash = Set(hashed_password);
+    }
+
+    match user.update(&data.sql_conn).await {
+        Ok(_) => AppResponse::ok("User updated".to_string(), None),
+        Err(e) => AppResponse::internal_err(format!("Failed to update user: {e}")),
+    }
+}
+
 pub fn routes(app_state: Arc<AppState>) -> Router {
     let jwt_auth = JwtAuth {
         conf: Arc::new(app_state.config.jwt_conf.clone()),
@@ -136,6 +232,8 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
         .route("/list/user", get(all_user))
         .route("/user/{user_id}", delete(delete_user))
         .route("/disable/user", post(user_control))
+        .route("/add/user", post(add_user))
+        .route("/update/user/{user_id}", post(update_user))
         .layer(ValidateRequestHeaderLayer::custom(jwt_auth))
         .with_state(app_state)
 }
