@@ -10,7 +10,9 @@ interface Props {
 }
 
 export function VersionListWithDialog({ promptId, authToken }: Props) {
-  if (!promptId) return null
+  if (!promptId) {
+    return null
+  }
   const [versions, setVersions] = useState<string[]>([])
   const [showAll, setShowAll] = useState(false)
   const maxShow = 3

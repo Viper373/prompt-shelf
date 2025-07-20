@@ -1,12 +1,8 @@
-import { Outlet } from '@tanstack/react-router'
-import { IconPalette } from '@tabler/icons-react'
-import { Separator } from '@/components/ui/separator'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import SettingsAppearance from './appearance'
-import SidebarNav from './components/sidebar-nav'
 
 export default function Settings() {
   return (
@@ -26,10 +22,10 @@ export default function Settings() {
   )
 }
 
-const sidebarNavItems = [
-  {
-    title: 'Appearance',
-    icon: <IconPalette size={18} />,
-    href: '/settings/appearance',
-  },
-]
+// const sidebarNavItems = [
+// 	{
+// 		title: 'Appearance',
+// 		icon: <IconPalette size={18} />,
+// 		href: '/settings/appearance',
+// 	},
+// ]

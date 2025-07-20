@@ -1,20 +1,9 @@
 import { LinkProps } from '@tanstack/react-router'
 
-interface User {
-  name: string
-  email: string
-  avatar: string
-}
 interface AuthUser {
   username: string
   email: string
   role: string
-}
-
-interface Team {
-  name: string
-  logo: React.ElementType
-  plan: string
 }
 
 interface BaseNavItem {

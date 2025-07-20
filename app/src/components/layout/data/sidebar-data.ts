@@ -1,9 +1,7 @@
 import {
-  IconHelp,
   IconLayoutDashboard,
   IconPalette,
   IconSettings,
-  IconUserCog,
   IconUsers,
 } from '@tabler/icons-react'
 import { useAuth } from '@/stores/authStore'

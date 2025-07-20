@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { useAuth } from '@/stores/authStore'
 import { createCommit, listVersion } from '@/lib/api'
-import { showSubmittedData } from '@/utils/show-submitted-data'
 import { Button } from '@/components/ui/button'
 import {
   Form,

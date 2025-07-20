@@ -24,7 +24,6 @@ export default function Prompts() {
       .then(setData)
       .catch(() => setData(null))
   }, [refreshFlag])
-  console.log(data)
   return (
     <PromptsProvider>
       <Header fixed>

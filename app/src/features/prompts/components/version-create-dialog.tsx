@@ -37,7 +37,6 @@ interface Props {
 }
 
 export function VersionCreateDialog({ open, onOpenChange, currentRow }: Props) {
-  console.log(currentRow?.id)
   const auth = useAuth()
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,7 +49,6 @@ export function VersionCreateDialog({ open, onOpenChange, currentRow }: Props) {
       return
     }
     const token = `Bearer ${auth.accessToken}`
-    console.log('Created version:', values.version)
     await createVersion(currentRow?.id, values.version, token)
     onOpenChange(false)
   }

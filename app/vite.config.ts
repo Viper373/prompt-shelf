@@ -6,30 +6,30 @@ import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-	server: {
-		proxy: {
-			'/api': {
-				target: 'http://prompt-shelf:8000',
-				changeOrigin: true,
-				rewrite: (path) => path.replace(/^\/api/, ''),
-			},
-		},
-	},
-	plugins: [
-		TanStackRouterVite({
-			target: 'react',
-			autoCodeSplitting: true,
-		}),
-		react(),
-		tailwindcss(),
-	],
-	resolve: {
-		alias: {
-			'@': path.resolve(__dirname, './src'),
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://prompt-shelf:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
+  plugins: [
+    TanStackRouterVite({
+      target: 'react',
+      autoCodeSplitting: true,
+    }),
+    react(),
+    tailwindcss(),
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
 
-			// fix loading all icon chunks in dev mode
-			// https://github.com/tabler/tabler-icons/issues/1233
-			'@tabler/icons-react': '@tabler/icons-react/dist/esm/icons/index.mjs',
-		},
-	},
+      // fix loading all icon chunks in dev mode
+      // https://github.com/tabler/tabler-icons/issues/1233
+      '@tabler/icons-react': '@tabler/icons-react/dist/esm/icons/index.mjs',
+    },
+  },
 })

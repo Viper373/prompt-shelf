@@ -1,7 +1,6 @@
 import { toast } from 'sonner'
 import { useAuth } from '@/stores/authStore'
 import { deletePrompt } from '@/lib/api'
-import { showSubmittedData } from '@/utils/show-submitted-data'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { usePrompts } from '@/features/prompts/context/prompts-context'
 import { CommitCreateDrawer } from './commit-create-drawer'

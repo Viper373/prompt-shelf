@@ -30,5 +30,5 @@ export const DataSchema = z.object({
   user_id: z.number(),
 })
 
-type PromptElement = z.infer<typeof PromptSchema>
+// type PromptElement = z.infer<typeof PromptSchema>
 export type PromptData = z.infer<typeof DataSchema>

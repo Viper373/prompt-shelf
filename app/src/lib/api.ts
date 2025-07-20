@@ -4,7 +4,6 @@ import { PromptData } from '@/features/prompts/data/schema'
 import {
   CommitInfo,
   UserInfo,
-  UserDetail,
   CreateUserParam,
   UpdateUserParam,
 } from '@/features/type'
@@ -71,7 +70,6 @@ export async function listVersion(
           duration: 2000,
         })
       } else {
-        console.log(err)
         toast.error(`List version failed: ${err}`, { duration: 2000 })
       }
       throw err
@@ -96,7 +94,6 @@ export async function listCommits(
           duration: 2000,
         })
       } else {
-        console.log(err)
         toast.error(`List commit failed: ${err}`, { duration: 2000 })
       }
       throw err
@@ -152,7 +149,6 @@ export async function createVersion(
           duration: 2000,
         })
       } else {
-        console.log(err)
         toast.error(`Create version failed: ${err}`, { duration: 2000 })
       }
     })
