@@ -11,8 +11,9 @@
 PromptShelf通过提供专为AI提示词设计的类Git版本控制系统来解决这些挑战。
 
 ## 预览
-![Web UI](./doc/preview/截屏2025-07-20 20.32.23.png)
-![Web UI](./doc/preview/截屏2025-07-20 20.33.05.png)
+![Web UI](./doc/preview/screenshot1.png)
+![Web UI](./doc/preview/screenshot3.png)
+![Web UI](./doc/preview/screenshot4.png)
 ## 系统概述
 PromptShelf是一个基于Rust构建的提示词版本控制系统，提供类似Git的功能来管理提示词的创建、版本跟踪和历史查询。
 

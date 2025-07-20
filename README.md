@@ -28,8 +28,10 @@ Key benefits:
 - Enable A/B testing of prompts without code changes
 
 ## Preview
-![Web UI](./doc/preview/截屏2025-07-20 20.32.23.png)
-![Web UI](./doc/preview/截屏2025-07-20 20.33.05.png)
+![Web UI](./doc/preview/screenshot1.png)
+![Web UI](./doc/preview/screenshot3.png)
+![Web UI](./doc/preview/screenshot4.png)
+
 ## Quick Start
 
 ### Prerequisites
