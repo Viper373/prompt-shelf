@@ -167,6 +167,23 @@ export function CommitCreateDrawer({ open, onOpenChange, currentRow }: Props) {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name='as_latest'
+              render={({ field }) => (
+                <FormItem className='flex flex-row items-center space-y-0 space-x-3'>
+                  <FormControl>
+                    <input
+                      type='checkbox'
+                      checked={field.value}
+                      onChange={field.onChange}
+                      className='h-4 w-4'
+                    />
+                  </FormControl>
+                  <FormLabel className='mb-0'>Set as latest</FormLabel>
+                </FormItem>
+              )}
+            />
           </form>
         </Form>
         <SheetFooter className='gap-2'>
