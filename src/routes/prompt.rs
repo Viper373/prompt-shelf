@@ -593,6 +593,49 @@ pub async fn list_commits(
     AppResponse::ok("List commits finished".to_string(), Some(commits))
 }
 
+#[derive(Deserialize)]
+pub struct DiffParam {
+    prompt_id: u64,
+    left_version: String,
+    right_version: String,
+    left_commit: String,
+    right_commit: String,
+}
+
+pub async fn diff(
+    State(data): State<Arc<AppState>>,
+    Extension(claims): Extension<TokenClaims>,
+    Json(payload): Json<DiffParam>,
+) -> AppResponse<String> {
+    let mut redis_conn = match data.redis_pool.get().await {
+        Ok(conn) => conn,
+        Err(e) => return AppResponse::internal_err(format!("Failed to get redis conn: {e}")),
+    };
+    let prompt_config = match query_prompt(
+        &mut redis_conn,
+        &data.sql_conn,
+        claims.id,
+        payload.prompt_id,
+    )
+    .await
+    {
+        Ok(p) => p,
+        Err(e) => return AppResponse::internal_err(format!("Failed to find prompt: {e}")),
+    };
+    match prompt_config
+        .diff_content(
+            &payload.left_version,
+            &payload.right_version,
+            &payload.left_commit,
+            &payload.right_commit,
+        )
+        .await
+    {
+        Ok(p) => AppResponse::ok("Diff content finished".to_string(), Some(p)),
+        Err(e) => AppResponse::internal_err(format!("Failed to diff prompt: {e}")),
+    }
+}
+
 pub fn routes(app_state: Arc<AppState>) -> Router {
     let jwt_auth = JwtAuth {
         conf: Arc::new(app_state.config.jwt_conf.clone()),
@@ -608,6 +651,7 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
         .route("/revert", post(revert))
         .route("/list_version", get(list_version))
         .route("/list_commit", get(list_commits))
+        .route("/diff", post(diff))
         .route("/", delete(del))
         .layer(ValidateRequestHeaderLayer::custom(jwt_auth))
         .with_state(app_state)
