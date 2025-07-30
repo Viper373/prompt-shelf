@@ -20,13 +20,9 @@ export async function signIn(
       return res.data.result
     })
     .catch((err) => {
-      if (axios.isAxiosError(err)) {
-        toast.error(err.response?.data.message || 'Login failed', {
-          duration: 2000,
-        })
-      } else {
-        toast.error('Network error', { duration: 2000 })
-      }
+      toast.error(err.response?.data.message || `Login failed, ${err}`, {
+        duration: 2000,
+      })
     })
 }
 
@@ -42,13 +38,9 @@ export async function signUp(
       return res.data.result
     })
     .catch((err) => {
-      if (axios.isAxiosError(err)) {
-        toast.error(err.response?.data.message || 'Login failed', {
-          duration: 2000,
-        })
-      } else {
-        toast.error('Network error', { duration: 2000 })
-      }
+      toast.error(err.response?.data.message || `Signup failed, ${err}`, {
+        duration: 2000,
+      })
     })
 }
 

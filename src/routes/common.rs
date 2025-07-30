@@ -10,6 +10,7 @@
 //                                                                            //
 // ************************************************************************** //
 
+use std::fmt::{self, Write};
 use std::{
     path::Path,
     sync::{OnceLock, atomic::AtomicBool},
@@ -23,6 +24,7 @@ use deadpool_redis::Pool;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use similar::{ChangeTag, TextDiff};
 use tokio::fs;
 use uuid::Uuid;
 
@@ -250,5 +252,31 @@ impl Prompts {
             .get(idx - 1)
             .ok_or_else(|| anyhow!("Previous commit not found"))?;
         Ok(prev_commit.commit_id.clone())
+    }
+    pub async fn diff_content(
+        &self,
+        left_version: &str,
+        right_version: &str,
+        left_commit: &str,
+        right_commit: &str,
+    ) -> Result<String> {
+        let left_content = Prompts::get_content(&self.id, left_version, left_commit)
+            .await
+            .unwrap_or(String::new());
+        let right_content = Prompts::get_content(&self.id, right_version, right_commit)
+            .await
+            .unwrap_or(String::new());
+
+        let diff = TextDiff::from_lines(&left_content, &right_content);
+        let mut res = String::new();
+        for change in diff.iter_all_changes() {
+            let sign = match change.tag() {
+                ChangeTag::Delete => "-",
+                ChangeTag::Insert => "+",
+                ChangeTag::Equal => " ",
+            };
+            write!(res, "{sign}{change}")?;
+        }
+        Ok(res)
     }
 }
