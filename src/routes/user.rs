@@ -67,7 +67,7 @@ pub async fn sign_up(
     let email = payload.email.unwrap();
     let username = payload.username.unwrap();
 
-    if let Some(_user) = Users::find()
+    let existing = match Users::find()
         .filter(
             Expr::col(users::Column::Email)
                 .eq(email.clone())
@@ -75,8 +75,11 @@ pub async fn sign_up(
         )
         .one(&data.sql_conn)
         .await
-        .unwrap()
     {
+        Ok(v) => v,
+        Err(e) => return AppResponse::internal_err(format!("Failed to query db: {e}")),
+    };
+    if let Some(_user) = existing {
         return AppResponse::bad_request("User already exists");
     }
 
@@ -126,13 +129,16 @@ pub async fn sign_in(
         return AppResponse::bad_request("Email is required");
     }
     let email = payload.email.unwrap();
-    if let Some(user) = Users::find()
+    let queried = match Users::find()
         .filter(users::Column::Email.eq(&email))
         .filter(users::Column::Valid.eq(true))
         .one(&data.sql_conn)
         .await
-        .unwrap()
     {
+        Ok(v) => v,
+        Err(e) => return AppResponse::internal_err(format!("Failed to query db: {e}")),
+    };
+    if let Some(user) = queried {
         let is_valid = match PasswordHash::new(&user.password_hash) {
             Ok(parsed_hash) => Argon2::default()
                 .verify_password(payload.password.as_bytes(), &parsed_hash)
