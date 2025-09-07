@@ -6,7 +6,7 @@ use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
-use axum::{Json, Router, extract::State, routing::post};
+use axum::{Json, Router, extract::State, routing::{post, get}};
 use sea_orm::{
     ActiveValue, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set, prelude::Expr,
 };
@@ -32,6 +32,23 @@ pub struct ResponseUserInfo {
     email: String,
     role: String,
     token: String,
+}
+
+#[derive(Serialize)]
+pub struct RegisterFlag {
+    allow_register: bool,
+}
+
+pub async fn allow_register_status(
+    State(data): State<Arc<AppState>>,
+) -> AppResponse<RegisterFlag> {
+    let flag = data
+        .allow_register
+        .load(std::sync::atomic::Ordering::Relaxed);
+    AppResponse::ok(
+        "Query allow_register succeed".to_string(),
+        Some(RegisterFlag { allow_register: flag }),
+    )
 }
 pub async fn sign_up(
     State(data): State<Arc<AppState>>,
@@ -163,5 +180,6 @@ pub fn routes(app_state: Arc<AppState>) -> Router {
     Router::new()
         .route("/signin", post(sign_in))
         .route("/signup", post(sign_up))
+        .route("/allow_register", get(allow_register_status))
         .with_state(app_state)
 }

@@ -1,12 +1,12 @@
-import { HTMLAttributes, useState } from 'react'
+import { HTMLAttributes, useEffect, useState } from 'react'
 import { z } from 'zod'
 import axios from 'axios'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useAuth } from '@/stores/authStore'
-import { signIn } from '@/lib/api'
+import { signIn, getAllowRegister } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -42,6 +42,13 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const navigate = useNavigate()
 
   const [isLoading, setIsLoading] = useState(false)
+  const [allowRegister, setAllowRegister] = useState(false)
+
+  useEffect(() => {
+    getAllowRegister()
+      .then((flag) => setAllowRegister(!!flag))
+      .catch(() => setAllowRegister(false))
+  }, [])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -110,6 +117,17 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         <Button className='mt-2' disabled={isLoading}>
           Login
         </Button>
+        {allowRegister && (
+          <p className='mt-2 text-center text-sm text-muted-foreground'>
+            Don't have an account?{' '}
+            <Link
+              to='/sign-up'
+              className='hover:text-primary underline underline-offset-4'
+            >
+              Sign Up
+            </Link>
+          </p>
+        )}
       </form>
     </Form>
   )

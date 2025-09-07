@@ -44,6 +44,17 @@ export async function signUp(
     })
 }
 
+export async function getAllowRegister(): Promise<boolean> {
+  return axios
+    .get('/api/user/allow_register')
+    .then((res) => {
+      return Boolean(res.data.result?.allow_register)
+    })
+    .catch(() => {
+      return true
+    })
+}
+
 export async function listVersion(
   prompt_id: number,
   jwt_token: string
