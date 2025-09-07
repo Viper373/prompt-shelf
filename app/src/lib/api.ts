@@ -23,6 +23,7 @@ export async function signIn(
       toast.error(err.response?.data.message || `Login failed, ${err}`, {
         duration: 2000,
       })
+      throw err
     })
 }
 
@@ -41,6 +42,7 @@ export async function signUp(
       toast.error(err.response?.data.message || `Signup failed, ${err}`, {
         duration: 2000,
       })
+      throw err
     })
 }
 
