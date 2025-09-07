@@ -29,10 +29,14 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 COPY --from=backend-builder /app/target/release/prompt-shelf /app
 RUN chmod +x /app
 
+# 配置nginx使用非特权端口8080
+RUN echo 'server {\n    listen 8080;\n    server_name localhost;\n    root /usr/share/nginx/html;\n    index index.html;\n    location / {\n        try_files $uri $uri/ /index.html;\n    }\n}' > /etc/nginx/conf.d/default.conf && \
+    rm /etc/nginx/sites-enabled/default 2>/dev/null || true
+
 # 暴露两个端口
-EXPOSE 80 8000
+EXPOSE 8080 8000
 
 # 启动脚本：同时启动nginx和后端服务
-RUN echo '#!/bin/bash\nnginx &\n/app\nwait' > /start.sh && chmod +x /start.sh
+RUN echo '#!/bin/bash\nnginx -g "daemon off;" &\n/app &\nwait' > /start.sh && chmod +x /start.sh
 
 CMD ["/start.sh"]
