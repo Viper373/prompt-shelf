@@ -7,7 +7,7 @@ use axum::Router;
 use common::AppState;
 use config::Config;
 
-use crate::init::{init_db, redis_pool};
+use crate::init::{init_db, redis_pool, ensure_tables};
 
 pub mod common;
 pub mod config;
@@ -22,6 +22,8 @@ pub async fn routes() -> Router {
     let sql_uri = env::var("MYSQL_URI")
         .unwrap_or("mysql://shelf:shelf-25@mysql:3306/promptshelf".to_string());
     let sql_conn = init_db(&sql_uri).await.unwrap();
+    // auto create tables if not exists
+    let _ = ensure_tables(&sql_conn).await;
     let redis_uri =
         env::var("REDIS_URI").unwrap_or("redis://:promptshelf-25@dragonfly:6379".to_string());
     let redis_pool = redis_pool(&redis_uri).await.unwrap();

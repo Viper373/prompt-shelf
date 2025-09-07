@@ -13,7 +13,7 @@
 use anyhow::{Context, Result, anyhow};
 use deadpool_redis::redis::AsyncCommands;
 use deadpool_redis::{self, Pool};
-use sea_orm::{ConnectOptions, Database, DatabaseConnection};
+use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbBackend, Schema, ConnectionTrait, Statement};
 use tokio::time::Duration;
 use tracing::*;
 
@@ -31,6 +31,66 @@ pub async fn init_db(uri: &str) -> Result<DatabaseConnection> {
         .await
         .map_err(|e| anyhow!(e))
         .context("Failed to connect to the database")
+}
+
+pub async fn ensure_tables(conn: &DatabaseConnection) -> Result<()> {
+    let backend: DbBackend = conn.get_database_backend();
+
+    // users
+    let users_sql = r#"
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(100) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  role VARCHAR(16) NOT NULL DEFAULT 'user',
+  valid BOOLEAN NOT NULL DEFAULT TRUE,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)
+"#;
+
+    // prompts
+    let prompts_sql = r#"
+CREATE TABLE IF NOT EXISTS prompts (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  latest_version VARCHAR(32),
+  latest_commit VARCHAR(64),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  user_id BIGINT,
+  file_key VARCHAR(100) NOT NULL,
+  org_id BIGINT
+)
+"#;
+
+    // organizations
+    let orgs_sql = r#"
+CREATE TABLE IF NOT EXISTS organizations (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  admin_id BIGINT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)
+"#;
+
+    // user_organizations
+    let map_sql = r#"
+CREATE TABLE IF NOT EXISTS user_organizations (
+  user_id BIGINT NOT NULL,
+  org_id BIGINT NOT NULL,
+  PRIMARY KEY (user_id, org_id),
+  INDEX idx_org_id (org_id)
+)
+"#;
+
+    for sql in [users_sql, prompts_sql, orgs_sql, map_sql] {
+        conn.execute(Statement::from_string(backend, sql.to_string())).await?;
+    }
+
+    Ok(())
 }
 
 pub async fn redis_pool(uri: &str) -> Result<Pool, Box<dyn std::error::Error>> {
